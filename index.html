@@ -3,6 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#1a2744">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="בדרך">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icon.svg">
     <title>בדרך - הדרך להצלחה היא הדרך</title>
     <style>
         /* ===== עיצוב כללי ===== */
@@ -1317,20 +1324,44 @@
             showScreen('screen-timepicker');
         }
 
-        function scheduleNotification(unlockTimeMs, timeStr) {
+        async function scheduleNotification(unlockTimeMs, timeStr) {
             if (!('Notification' in window)) return;
-            Notification.requestPermission().then(perm => {
-                if (perm !== 'granted') return;
-                const delay = unlockTimeMs - Date.now();
-                if (delay > 0 && delay < 48 * 60 * 60 * 1000) {
-                    setTimeout(() => {
-                        new Notification('בדרך - זמן לתנועה היומית!', {
-                            body: 'התנועה היומית שלך פתוחה. בוא נעשה 7 דקות! 🎯',
-                            icon: ''
-                        });
-                    }, delay);
+            const perm = await Notification.requestPermission();
+            if (perm !== 'granted') return;
+
+            const delay = unlockTimeMs - Date.now();
+            if (delay <= 0 || delay > 48 * 60 * 60 * 1000) return;
+
+            // 1. פנה ל-Service Worker — שיטה אמינה יותר (עובדת גם כשהטאב ברקע)
+            if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+                navigator.serviceWorker.controller.postMessage({
+                    type: 'SCHEDULE_NOTIFICATION',
+                    unlockTime: unlockTimeMs
+                });
+            }
+
+            // 2. גם setTimeout בדף — backup אם SW לא פעיל
+            setTimeout(() => {
+                if (document.visibilityState === 'hidden' || !navigator.serviceWorker.controller) {
+                    new Notification('בדרך — זמן לתנועה היומית! 🎯', {
+                        body: 'ה-7 דקות שלך מחכות. בוא נמשיך את הדרך.',
+                        icon: './icon.svg',
+                        dir: 'rtl',
+                        lang: 'he',
+                        vibrate: [200, 100, 200]
+                    });
                 }
-            });
+            }, delay);
+
+            // 3. רשום Periodic Background Sync אם נתמך (Chrome Android)
+            if ('serviceWorker' in navigator && 'periodicSync' in navigator.serviceWorker) {
+                try {
+                    const reg = await navigator.serviceWorker.ready;
+                    await reg.periodicSync.register('check-bderech-notification', {
+                        minInterval: 60 * 60 * 1000 // בדוק כל שעה
+                    });
+                } catch(e) { /* לא נתמך בדפדפן זה */ }
+            }
         }
 
         function confirmTimePicker() {
@@ -1437,6 +1468,19 @@
                 showScreen('screen-landing');
             }
         });
+    </script>
+
+    <!-- ===== רישום Service Worker ===== -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js', { scope: '/bderech-/' })
+                    .then(reg => {
+                        console.log('SW רשום:', reg.scope);
+                    })
+                    .catch(err => console.log('SW נכשל:', err));
+            });
+        }
     </script>
 </body>
 </html>
