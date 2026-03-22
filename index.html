@@ -655,9 +655,7 @@
 
         <!-- מסך 0: נחיתה -->
         <div class="screen active landing-screen" id="screen-landing">
-            <div class="landing-logo">בדרך</div>
-            <div class="landing-tagline">הדרך להצלחה היא הדרך</div>
-            <div class="landing-title">הדרך<br>היא <span style="color:#5bc8f5;font-weight:700">ההצלחה</span></div>
+            <div class="landing-tagline" style="font-size:18px;opacity:1;color:#e0e0e0;letter-spacing:2px;font-weight:400;text-transform:none;margin-bottom:32px;">הדרך להצלחה היא הדרך</div>
             <div class="landing-sub">7 דקות ביום. כל יום. זה הכל.</div>
             <div class="landing-lines">
                 <div class="landing-line">אין קסמים. יש תנועה יומית.</div>
@@ -670,7 +668,7 @@
         <!-- מסך 1: יעד -->
         <div class="screen" id="screen-goal">
             <div class="lbl">בדרך</div>
-            <div class="big-title">הדרך<br>היא <b>ההצלחה</b></div>
+            <div style="font-size:16px;color:#e0e0e0;margin-bottom:24px;font-weight:400;">הדרך להצלחה היא הדרך</div>
             <div class="q-text">מה היעד שלך?</div>
             <textarea id="goal-input" placeholder="למשל: לנגן במפוחית, ללמוד סינית, לרוץ מרתון..."></textarea>
             <button class="btn-main" onclick="startChat()">המשך ←</button>
@@ -784,7 +782,17 @@
                     <div class="preview-lock-time" id="preview-unlock-time"></div>
                 </div>
             </div>
-            <button class="btn-sec" onclick="showScreen('screen-home')">חזרה לדף הבית</button>
+            <button class="btn-sec" onclick="showScreen('screen-home')">לדף הבית ←</button>
+        </div>
+
+        <!-- מסך: בחירת שעה -->
+        <div class="screen" id="screen-timepicker">
+            <div style="flex:1;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;gap:20px;">
+                <div style="font-size:28px;font-weight:300;color:#e0e0e0;">יופי! 🎉</div>
+                <div style="font-size:16px;color:#888;line-height:1.6;">באיזה שעה מחר לפתוח<br>את התנועה הבאה?</div>
+                <input type="time" id="time-picker-input" value="08:00" style="font-size:28px;text-align:center;padding:12px 20px;background:#122040;border:2px solid #5bc8f5;border-radius:12px;color:#e0e0e0;width:180px;"/>
+                <button class="btn-main" style="max-width:280px;" onclick="confirmTimePicker()">אישור ✓</button>
+            </div>
         </div>
 
         <!-- מסך 7: API Key -->
@@ -913,6 +921,33 @@
         let totalTime = 420;
         let bonusStarted = false;
 
+        function saveState() {
+            const state = {
+                currentGoal, goalType, fullPlan, totalMoves, completedMoves,
+                currentDay, litIndices, allIndices, shapeType, shapeName
+            };
+            localStorage.setItem('bderech_state', JSON.stringify(state));
+        }
+
+        function loadState() {
+            const raw = localStorage.getItem('bderech_state');
+            if (!raw) return false;
+            try {
+                const s = JSON.parse(raw);
+                currentGoal = s.currentGoal || '';
+                goalType = s.goalType || '';
+                fullPlan = s.fullPlan || [];
+                totalMoves = s.totalMoves || 0;
+                completedMoves = s.completedMoves || 0;
+                currentDay = s.currentDay || 1;
+                litIndices = s.litIndices || [];
+                allIndices = s.allIndices || [];
+                shapeType = s.shapeType || 'star';
+                shapeName = s.shapeName || '';
+                return fullPlan.length > 0;
+            } catch(e) { return false; }
+        }
+
         // ===== זיהוי יעד =====
         function detectGoalType(goal) {
             const g = goal.toLowerCase();
@@ -931,6 +966,17 @@
 
         // ===== נחיתה =====
         function startOnboarding() {
+            if (loadState() && fullPlan.length > 0) {
+                const msg = 'רק יעד אחד כל פעם.\n"הרבה יעדים מובילים לשום מקום אמיתי"\n\nרוצה להחליף את היעד הנוכחי?';
+                if (confirm(msg)) {
+                    localStorage.removeItem('bderech_state');
+                    localStorage.removeItem('bderech_unlock_time');
+                    currentGoal = ''; fullPlan = []; currentDay = 1; completedMoves = 0;
+                    if (!getApiKey()) { showScreen('screen-apikey'); return; }
+                    showScreen('screen-goal');
+                }
+                return;
+            }
             if (!getApiKey()) { showScreen('screen-apikey'); return; }
             showScreen('screen-goal');
         }
@@ -1046,12 +1092,32 @@
             }
         }
 
+        function renderMarkdown(text) {
+            let html = text
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                .replace(/^## (.+)$/gm, '<div style="font-weight:700;color:#5bc8f5;margin:8px 0 4px;">$1</div>');
+            const lines = html.split('\n');
+            const out = [];
+            let inList = false;
+            for (const line of lines) {
+                if (/^[•\-\*] /.test(line.trim())) {
+                    if (!inList) { out.push('<ul style="margin:6px 0 6px 16px;padding:0;">'); inList = true; }
+                    out.push('<li style="margin:3px 0;">' + line.trim().replace(/^[•\-\*] /, '') + '</li>');
+                } else {
+                    if (inList) { out.push('</ul>'); inList = false; }
+                    out.push(line);
+                }
+            }
+            if (inList) out.push('</ul>');
+            return out.join('<br>').replace(/<br><ul/g,'<ul').replace(/<\/ul><br>/g,'</ul>');
+        }
+
         function addMessage(role, text) {
             const container = document.getElementById('chat-messages');
             const div = document.createElement('div');
             div.className = `bubble ${role}`;
             if (role === 'ai') {
-                div.innerHTML = `<span class="who">בדרך AI</span>${text}`;
+                div.innerHTML = `<span class="who">מאמן אישי</span>${renderMarkdown(text)}`;
             } else {
                 div.textContent = text;
             }
@@ -1136,6 +1202,7 @@
             document.getElementById('goal-name').textContent = currentGoal;
             loadCurrentDay();
             buildMapDisplay();
+            saveState();
             showScreen('screen-home');
         }
 
@@ -1161,9 +1228,24 @@
                         '<div style="font-size:32px">🔒</div>' +
                         '<div style="font-size:16px;color:#e0e0e0;font-weight:700;">התנועה היומית — רק מחר</div>' +
                         '<div style="font-size:13px;color:#888;line-height:1.6;">כדי לשמור על התהליך<br>לא שורפים את המוטיבציה ביום אחד</div>' +
-                        '<div style="font-size:13px;color:#888;">נפתח מחר בשעה</div>' +
-                        '<div style="font-size:22px;color:#5bc8f5;font-weight:700;">' + formatUnlockTime(getUnlockTime()) + '</div>' +
+                        '<div style="font-size:13px;color:#888;">נפתח בשעה ' + formatUnlockTime(getUnlockTime()) + '</div>' +
+                        '<div id="countdown-display" style="font-size:22px;color:#5bc8f5;font-weight:700;font-variant-numeric:tabular-nums;">--:--:--</div>' +
                         '</div>';
+                    if (window._countdownInterval) clearInterval(window._countdownInterval);
+                    window._countdownInterval = setInterval(() => {
+                        const remaining = getUnlockTime() - Date.now();
+                        if (remaining <= 0) {
+                            clearInterval(window._countdownInterval);
+                            loadCurrentDay();
+                            buildMapDisplay();
+                            return;
+                        }
+                        const h = Math.floor(remaining / 3600000);
+                        const m = Math.floor((remaining % 3600000) / 60000);
+                        const s = Math.floor((remaining % 60000) / 1000);
+                        const el = document.getElementById('countdown-display');
+                        if (el) el.textContent = `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
+                    }, 1000);
                 }
             } else {
                 if (startBtn) { startBtn.style.display = 'block'; startBtn.disabled = false; startBtn.textContent = 'התחל את התנועה ←'; }
@@ -1221,22 +1303,60 @@
                 return;
             }
 
-            // שמור זמן פתיחה: מחר באותה שעה
-            const unlockTime = Date.now() + 24 * 60 * 60 * 1000;
-            localStorage.setItem('bderech_unlock_time', unlockTime.toString());
-
-            // הצג תצוגה מקדימה של היום הבא
+            // הצג תצוגה מקדימה של היום הבא (ללא זמן פתיחה - יוגדר ב-timepicker)
             const nextPlan = fullPlan[currentDay - 1] || fullPlan[fullPlan.length - 1];
             document.getElementById('preview-badge').textContent = `יום ${completedDayNum} הושלם ✓`;
             document.getElementById('preview-goal-name').textContent = currentGoal;
             document.getElementById('preview-next-day').textContent = currentDay;
             document.getElementById('preview-task').textContent = nextPlan.task;
             document.getElementById('preview-how').textContent = nextPlan.how;
-            document.getElementById('preview-unlock-time').textContent = formatUnlockTime(unlockTime);
 
             loadCurrentDay();
             buildMapDisplay();
-            showScreen('screen-preview');
+            saveState();
+            showScreen('screen-timepicker');
+        }
+
+        function scheduleNotification(unlockTimeMs, timeStr) {
+            if (!('Notification' in window)) return;
+            Notification.requestPermission().then(perm => {
+                if (perm !== 'granted') return;
+                const delay = unlockTimeMs - Date.now();
+                if (delay > 0 && delay < 48 * 60 * 60 * 1000) {
+                    setTimeout(() => {
+                        new Notification('בדרך - זמן לתנועה היומית!', {
+                            body: 'התנועה היומית שלך פתוחה. בוא נעשה 7 דקות! 🎯',
+                            icon: ''
+                        });
+                    }, delay);
+                }
+            });
+        }
+
+        function confirmTimePicker() {
+            const timeVal = document.getElementById('time-picker-input').value || '08:00';
+            const [hours, minutes] = timeVal.split(':').map(Number);
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            tomorrow.setHours(hours, minutes, 0, 0);
+            const unlockTime = tomorrow.getTime();
+            localStorage.setItem('bderech_unlock_time', unlockTime.toString());
+
+            scheduleNotification(unlockTime, timeVal);
+
+            const nextPlan = fullPlan[currentDay - 1] || fullPlan[fullPlan.length - 1];
+            if (nextPlan) {
+                document.getElementById('preview-unlock-time').textContent = timeVal;
+                showScreen('screen-preview');
+            } else {
+                showScreen('screen-home');
+            }
+
+            const msg = document.createElement('div');
+            msg.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#0d2245;border:2px solid #5bc8f5;padding:14px 24px;border-radius:12px;font-size:15px;color:#e0e0e0;z-index:999;text-align:center;';
+            msg.textContent = `יופי נפגש מחר ב-${timeVal} 👋`;
+            document.body.appendChild(msg);
+            setTimeout(() => msg.remove(), 3000);
         }
 
         // ===== טיימר =====
@@ -1308,7 +1428,14 @@
             s.insertAdjacentHTML('beforeend', _cHtml);
         });
 
-            showScreen('screen-landing');
+            if (loadState() && fullPlan.length > 0) {
+                document.getElementById('goal-name').textContent = currentGoal;
+                loadCurrentDay();
+                buildMapDisplay();
+                showScreen('screen-home');
+            } else {
+                showScreen('screen-landing');
+            }
         });
     </script>
 </body>
