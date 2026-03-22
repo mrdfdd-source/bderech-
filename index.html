@@ -775,23 +775,6 @@
             </div>
         </div>
 
-        <!-- מסך 8: תצוגה מקדימה יום הבא -->
-        <div class="screen" id="screen-preview">
-            <div id="preview-badge" style="font-size:13px;color:#7ab8d8;letter-spacing:2px;margin-bottom:8px;font-weight:600;">יום X הושלם ✓</div>
-            <div class="preview-congrats">כל הכבוד!</div><div style="font-size:16px;color:#e0e0e0;margin-bottom:8px;">אתה צעד אחד יותר מאתמול לעבר היעד</div><div style="font-size:14px;color:#5bc8f5;font-weight:700;margin-bottom:24px;" id="preview-goal-name"></div>
-            <div class="preview-card">
-                <div class="preview-card-label">התנועה הבאה — יום <span id="preview-next-day"></span></div>
-                <div class="preview-card-task" id="preview-task"></div>
-                <div class="preview-card-how" id="preview-how"></div>
-                <div class="preview-lock" id="preview-lock">
-                    <div class="preview-lock-icon">🔒</div>
-                    <div class="preview-lock-text" style="line-height:1.8;">התנועה היומית — רק מחר<br><span style="font-size:12px;color:#666;">כדי לשמור על התהליך<br>לא שורפים את המוטיבציה ביום אחד</span></div><div class="preview-lock-text" style="margin-top:6px;">נפתח מחר בשעה</div>
-                    <div class="preview-lock-time" id="preview-unlock-time"></div>
-                </div>
-            </div>
-            <button class="btn-sec" onclick="showScreen('screen-home')">לדף הבית ←</button>
-        </div>
-
         <!-- מסך: בחירת שעה -->
         <div class="screen" id="screen-timepicker">
             <div style="flex:1;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;gap:20px;">
@@ -1231,12 +1214,13 @@
             if (isLocked()) {
                 if (startBtn) { startBtn.style.display = 'none'; }
                 if (taskCard) {
-                    taskCard.innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:24px;text-align:center;">' +
-                        '<div style="font-size:32px">🔒</div>' +
-                        '<div style="font-size:16px;color:#e0e0e0;font-weight:700;">התנועה היומית — רק מחר</div>' +
-                        '<div style="font-size:13px;color:#888;line-height:1.6;">כדי לשמור על התהליך<br>לא שורפים את המוטיבציה ביום אחד</div>' +
-                        '<div style="font-size:13px;color:#888;">נפתח בשעה ' + formatUnlockTime(getUnlockTime()) + '</div>' +
-                        '<div id="countdown-display" style="font-size:22px;color:#5bc8f5;font-weight:700;font-variant-numeric:tabular-nums;">--:--:--</div>' +
+                    taskCard.innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:28px;text-align:center;">' +
+                        '<div style="font-size:36px">🔒</div>' +
+                        '<div style="font-size:17px;color:#e0e0e0;font-weight:700;">יום ' + currentDay + ' — התנועה נעולה</div>' +
+                        '<div style="font-size:13px;color:#5bc8f5;font-weight:600;">היעד: ' + currentGoal + '</div>' +
+                        '<div style="font-size:12px;color:#666;line-height:1.6;">נפתח מחר ב־' + formatUnlockTime(getUnlockTime()) + '</div>' +
+                        '<div id="countdown-display" style="font-size:30px;color:#5bc8f5;font-weight:300;font-variant-numeric:tabular-nums;letter-spacing:3px;">--:--:--</div>' +
+                        '<div style="font-size:11px;color:#444;">שמור אנרגיה למחר — המשכיות היא הסוד</div>' +
                         '</div>';
                     if (window._countdownInterval) clearInterval(window._countdownInterval);
                     window._countdownInterval = setInterval(() => {
@@ -1310,14 +1294,6 @@
                 return;
             }
 
-            // הצג תצוגה מקדימה של היום הבא (ללא זמן פתיחה - יוגדר ב-timepicker)
-            const nextPlan = fullPlan[currentDay - 1] || fullPlan[fullPlan.length - 1];
-            document.getElementById('preview-badge').textContent = `יום ${completedDayNum} הושלם ✓`;
-            document.getElementById('preview-goal-name').textContent = currentGoal;
-            document.getElementById('preview-next-day').textContent = currentDay;
-            document.getElementById('preview-task').textContent = nextPlan.task;
-            document.getElementById('preview-how').textContent = nextPlan.how;
-
             loadCurrentDay();
             buildMapDisplay();
             saveState();
@@ -1375,19 +1351,16 @@
 
             scheduleNotification(unlockTime, timeVal);
 
-            const nextPlan = fullPlan[currentDay - 1] || fullPlan[fullPlan.length - 1];
-            if (nextPlan) {
-                document.getElementById('preview-unlock-time').textContent = timeVal;
-                showScreen('screen-preview');
-            } else {
-                showScreen('screen-home');
-            }
+            // חזור לדף הבית — הנעילה תוצג שם עם ספירה לאחור
+            loadCurrentDay();
+            showScreen('screen-home');
 
+            // הודעה קצרה בתחתית
             const msg = document.createElement('div');
-            msg.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#0d2245;border:2px solid #5bc8f5;padding:14px 24px;border-radius:12px;font-size:15px;color:#e0e0e0;z-index:999;text-align:center;';
-            msg.textContent = `יופי נפגש מחר ב-${timeVal} 👋`;
+            msg.style.cssText = 'position:fixed;bottom:32px;left:50%;transform:translateX(-50%);background:#0d2245;border:2px solid #5bc8f5;padding:16px 28px;border-radius:14px;font-size:16px;color:#e0e0e0;z-index:999;text-align:center;white-space:nowrap;';
+            msg.textContent = `נתראה מחר ב־${timeVal} 👋`;
             document.body.appendChild(msg);
-            setTimeout(() => msg.remove(), 3000);
+            setTimeout(() => msg.remove(), 3500);
         }
 
         // ===== טיימר =====
