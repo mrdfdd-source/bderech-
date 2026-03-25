@@ -1277,7 +1277,7 @@
 
                 const text = await callClaude(
                     [{role: 'user', content: `יעד: ${currentGoal}\nשיחה:\n${convSummary}\n\nבנה תוכנית 5 ימים ספציפית ל"${currentGoal}".`}],
-                    PLAN_SYSTEM, 1000
+                    PLAN_SYSTEM, 2000
                 );
 
                 console.log('Plan AI response:', text);
