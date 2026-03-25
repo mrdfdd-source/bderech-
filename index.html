@@ -1285,12 +1285,18 @@
                 if (text) {
                     try {
                         const parsed = extractJSON(text);
+                        console.log('Parsed plan:', parsed);
                         if (Array.isArray(parsed) && parsed.length > 0) {
                             fullPlan = parsed;
                             initPlan(meta.totalMoves, meta.shape, meta.shapeLabel);
                             return;
+                        } else {
+                            console.error('Parsed but not array:', parsed);
                         }
-                    } catch(e) { console.error('Plan parse error:', e, '\nRaw:', text); }
+                    } catch(e) {
+                        const repaired = repairJSON(text.slice(text.indexOf('['), text.lastIndexOf(']') + 1));
+                        console.error('Parse error:', e.message, '\nRepaired attempt:', repaired.slice(0, 200));
+                    }
                 }
             }
 
