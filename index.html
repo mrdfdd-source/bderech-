@@ -338,19 +338,21 @@
             gap: 6px; 
             margin-bottom: 18px; 
         }
-        .node { 
-            width: 16px; 
-            height: 16px; 
-            border-radius: 50%; 
-            background: #1a1f27; 
-            border: 1px solid #252d3a; 
-            transition: all 0.4s ease; 
-            flex-shrink: 0; 
+        .node {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #1a1f27;
+            border: 1px solid #252d3a;
+            transition: all 0.4s ease;
+            flex-shrink: 0;
+            -webkit-tap-highlight-color: transparent;
         }
-        .node.lit { 
-            background: #5bc8f5; 
-            border-color: #5bc8f5; 
-            box-shadow: 0 0 8px rgba(255, 140, 0, 0.6); 
+        .node.lit {
+            background: #5bc8f5;
+            border-color: #5bc8f5;
+            box-shadow: 0 0 8px rgba(255, 140, 0, 0.6);
+            touch-action: manipulation; 
         }
         .node.current { 
             background: transparent; 
@@ -1396,7 +1398,9 @@
                         star.style.cssText = 'position:absolute;top:-5px;right:-5px;font-size:8px;color:#f5a623;line-height:1;';
                         node.appendChild(star);
                     }
-                    node.onclick = () => showDayPopup(hist, litIdx + 1);
+                    const _h = hist, _n = litIdx + 1;
+                    node.addEventListener('click', () => showDayPopup(_h, _n));
+                    node.addEventListener('touchend', (e) => { e.preventDefault(); showDayPopup(_h, _n); });
                 } else if (completedMoves < totalMoves && i === allIndices[completedMoves]) {
                     node.classList.add('current');
                 }
