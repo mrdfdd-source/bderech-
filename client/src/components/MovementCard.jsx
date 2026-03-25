@@ -9,7 +9,7 @@ const SHAPE_ICONS = {
   rocket: '🚀'
 };
 
-export default function MovementCard({ movement, day, totalDays }) {
+export default function MovementCard({ movement, day, totalDays, goal }) {
   const [expanded, setExpanded] = useState(false);
 
   if (!movement) return null;
@@ -41,9 +41,17 @@ export default function MovementCard({ movement, day, totalDays }) {
         </div>
 
         {/* Action title */}
-        <h3 className="text-white font-bold text-xl mb-3 leading-snug">
+        <h3 className="text-white font-bold text-xl mb-2 leading-snug">
           {movement.action}
         </h3>
+
+        {/* Goal connection */}
+        {goal && (
+          <p className="text-[#F5A623]/60 text-xs mb-3 flex items-center gap-1">
+            <span>←</span>
+            <span>לכיוון: {goal.length > 35 ? goal.slice(0, 35) + '...' : goal}</span>
+          </p>
+        )}
 
         {/* Instruction */}
         <div className={`overflow-hidden transition-all duration-300 ${expanded ? 'max-h-96' : 'max-h-20'}`}>

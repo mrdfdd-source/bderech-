@@ -18,6 +18,7 @@ export default function Dashboard() {
   const [showAbandonModal, setShowAbandonModal] = useState(false);
   const [timerCompleted, setTimerCompleted] = useState(false);
   const [showCoachChat, setShowCoachChat] = useState(false);
+  const [showStopRitual, setShowStopRitual] = useState(false);
 
   const loadPlan = useCallback(async () => {
     try {
@@ -48,7 +49,6 @@ export default function Dashboard() {
     setCompleting(true);
     try {
       const res = await plansAPI.completeToday(planData.plan._id);
-      setTodayDone(true);
       dispatch({ type: 'SET_CURRENT_PLAN', payload: res.data.plan });
       setPlanData((prev) => ({
         ...prev,
@@ -56,6 +56,8 @@ export default function Dashboard() {
         todayCompleted: true,
         completedDays: res.data.completedDays
       }));
+      setShowStopRitual(true);
+      setTimeout(() => { setShowStopRitual(false); setTodayDone(true); }, 2500);
     } catch (err) {
       setError(err.response?.data?.message || 'שגיאה בסימון התנועה');
       setTimeout(() => setError(''), 3000);
@@ -139,34 +141,48 @@ export default function Dashboard() {
 
       {/* Main content */}
       <div className="flex-1 px-5 flex flex-col gap-4">
-        {todayDone ? (
+
+        {/* Stop ritual overlay */}
+        {showStopRitual && (
+          <div className="flex-1 flex flex-col items-center justify-center text-center py-8 slide-up">
+            <div className="w-20 h-20 rounded-full bg-[#1a1a1a] border border-[#F5A623]/30 flex items-center justify-center mb-6"
+              style={{ boxShadow: '0 0 40px rgba(245,166,35,0.15)' }}>
+              <span className="text-4xl">🫁</span>
+            </div>
+            <h2 className="text-2xl font-bold text-white mb-3">עצור.</h2>
+            <p className="text-gray-400 text-lg leading-relaxed">נשום. עשית את זה.</p>
+            <p className="text-gray-600 text-sm mt-4">7 דקות שלך, שמורות.</p>
+          </div>
+        )}
+
+        {!showStopRitual && todayDone ? (
           /* Completed state */
           <div className="flex-1 flex flex-col items-center justify-center text-center py-8 slide-up">
             <div className="relative mb-6">
-              <div
-                className="w-28 h-28 rounded-full bg-gradient-to-br from-[#F5A623] to-[#C47D0E] flex items-center justify-center text-5xl shadow-[0_0_60px_rgba(245,166,35,0.5)]"
-              >
+              <div className="w-28 h-28 rounded-full bg-gradient-to-br from-[#F5A623] to-[#C47D0E] flex items-center justify-center text-5xl shadow-[0_0_60px_rgba(245,166,35,0.5)]">
                 🌟
               </div>
               <div className="absolute inset-0 rounded-full border-2 border-[#F5A623] animate-ping opacity-20" />
             </div>
-            <h2 className="text-2xl font-bold text-white mb-3">כל הכבוד!</h2>
-            <p className="text-gray-400 text-base leading-relaxed max-w-xs">
-              עשית את התנועה שלך היום
-              <br />
-              <span className="text-gray-600 text-sm mt-2 block">
-                מחר ממשיכים
-              </span>
+
+            {plan.currentDay - 1 === 7 ? (
+              <div className="mb-4 bg-[#F5A623]/10 border border-[#F5A623]/20 rounded-2xl px-5 py-3 max-w-xs">
+                <p className="text-[#F5A623] font-bold text-base">שבוע שלם. 🔥</p>
+                <p className="text-gray-400 text-sm mt-1">רוב האנשים כבר ויתרו — אתה עדיין כאן.</p>
+              </div>
+            ) : (
+              <h2 className="text-2xl font-bold text-white mb-2">כל הכבוד.</h2>
+            )}
+
+            <p className="text-gray-500 text-sm leading-relaxed max-w-xs">
+              {completedDays * 7} דקות השקעת בדרך שלך
             </p>
 
-            <button
-              onClick={() => navigate('/map')}
-              className="btn-ghost mt-6 max-w-xs"
-            >
+            <button onClick={() => navigate('/map')} className="btn-ghost mt-6 max-w-xs">
               ראה את המפה שלך
             </button>
           </div>
-        ) : (
+        ) : !showStopRitual ? (
           /* Active state */
           <>
             {currentDayMovement ? (
@@ -174,6 +190,7 @@ export default function Dashboard() {
                 movement={currentDayMovement}
                 day={plan.currentDay}
                 totalDays={plan.totalDays}
+                goal={plan.goal}
               />
             ) : (
               <div className="card text-center py-8">
@@ -206,7 +223,7 @@ export default function Dashboard() {
               </div>
             )}
           </>
-        )}
+        ) : null}
       </div>
 
       {/* Bottom nav */}
@@ -229,16 +246,6 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Floating coach chat button */}
-      <button
-        onClick={() => setShowCoachChat(true)}
-        className="fixed bottom-6 left-5 w-14 h-14 rounded-full bg-gradient-to-br from-[#F5A623] to-[#C47D0E] flex items-center justify-center shadow-[0_4px_20px_rgba(245,166,35,0.4)] active:scale-95 transition-all z-40"
-        title="שוחח עם המאמן"
-      >
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="black" strokeWidth="2">
-          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-        </svg>
-      </button>
 
       {/* Abandon / change goal modal */}
       {showAbandonModal && (

@@ -7,7 +7,8 @@
       "Bash(git remote:*)",
       "Bash(git push:*)",
       "Bash(git rm:*)",
-      "Skill(update-config)"
+      "Skill(update-config)",
+      "Bash(npm run:*)"
     ]
   },
   "hooks": {
@@ -17,9 +18,9 @@
         "hooks": [
           {
             "type": "command",
-            "command": "cd /c/Users/dov/baderech && git add -A && git diff --cached --quiet || (git commit -m \"auto: update\" && git push origin master) 2>/dev/null || true",
-            "timeout": 30,
-            "statusMessage": "מעלה ל-GitHub..."
+            "command": "cd /c/Users/dov/baderech/client && npm run build 2>/dev/null; cd /c/Users/dov/baderech && git add -A && git diff --cached --quiet || (git commit -m \"auto: update\" && git push origin master) 2>/dev/null || true",
+            "timeout": 60,
+            "statusMessage": "בונה ומעלה ל-GitHub..."
           }
         ]
       }

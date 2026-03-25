@@ -168,16 +168,6 @@ export default function Map() {
         </div>
       )}
 
-      {/* Floating coach button */}
-      <button
-        onClick={() => { setChatMovement(null); setShowCoachChat(true); }}
-        className="fixed bottom-6 left-5 w-14 h-14 rounded-full bg-gradient-to-br from-[#F5A623] to-[#C47D0E] flex items-center justify-center shadow-[0_4px_20px_rgba(245,166,35,0.4)] active:scale-95 transition-all z-40"
-      >
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="black" strokeWidth="2">
-          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-        </svg>
-      </button>
-
       <CoachChatModal
         isOpen={showCoachChat}
         onClose={() => setShowCoachChat(false)}
