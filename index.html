@@ -1389,16 +1389,14 @@
                     node.style.cursor = 'pointer';
                     node.style.position = 'relative';
                     const hist = completedHistory[litIdx];
-                    if (hist) {
-                        if (hardDays.includes(hist.day)) {
-                            node.style.boxShadow = '0 0 0 2px #f5a623';
-                            const star = document.createElement('span');
-                            star.textContent = '★';
-                            star.style.cssText = 'position:absolute;top:-5px;right:-5px;font-size:8px;color:#f5a623;line-height:1;';
-                            node.appendChild(star);
-                        }
-                        node.onclick = () => showDayPopup(hist);
+                    if (hist && hardDays.includes(hist.day)) {
+                        node.style.boxShadow = '0 0 0 2px #f5a623';
+                        const star = document.createElement('span');
+                        star.textContent = '★';
+                        star.style.cssText = 'position:absolute;top:-5px;right:-5px;font-size:8px;color:#f5a623;line-height:1;';
+                        node.appendChild(star);
                     }
+                    node.onclick = () => showDayPopup(hist, litIdx + 1);
                 } else if (completedMoves < totalMoves && i === allIndices[completedMoves]) {
                     node.classList.add('current');
                 }
@@ -1406,28 +1404,38 @@
             }
         }
 
-        function showDayPopup(hist) {
+        function showDayPopup(hist, dayNum) {
             const existing = document.getElementById('day-popup-overlay');
             if (existing) existing.remove();
-            const date = new Date(hist.completedAt).toLocaleDateString('he-IL');
-            const isHard = hardDays.includes(hist.day);
             const overlay = document.createElement('div');
             overlay.id = 'day-popup-overlay';
             overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);display:flex;align-items:flex-end;justify-content:center;z-index:9000;padding:24px;';
-            overlay.innerHTML = `<div style="background:#0d1a2e;border:1px solid #1e3a5f;border-radius:20px;padding:20px;width:100%;max-width:360px;">
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-                    <div style="color:#5bc8f5;font-weight:600;">יום ${hist.day} 💡</div>
-                    <button onclick="document.getElementById('day-popup-overlay').remove()" style="background:none;border:none;color:#666;font-size:20px;cursor:pointer;">✕</button>
-                </div>
-                <div style="font-size:16px;color:#e0e0e0;font-weight:600;margin-bottom:8px;">${hist.task}</div>
-                <div style="font-size:13px;color:#888;line-height:1.6;margin-bottom:12px;">${hist.how}</div>
-                ${isHard ? `<div style="font-size:12px;color:#f5a623;margin-bottom:12px;">★ הייתי שם, ועשיתי את זה בכל זאת.</div>` : ''}
-                <div style="font-size:11px;color:#444;margin-bottom:14px;">הושלם ב-${date}</div>
-                <button id="hard-day-btn" onclick="toggleHardDay(${hist.day})"
-                    style="width:100%;padding:10px;border-radius:12px;border:1px solid ${isHard ? '#f5a623' : '#2a3a4a'};background:${isHard ? 'rgba(245,166,35,0.1)' : 'transparent'};color:${isHard ? '#f5a623' : '#555'};font-size:13px;cursor:pointer;">
-                    ${isHard ? '★ יום קשה — הסר סימון' : '☆ סמן כיום קשה'}
-                </button>
-            </div>`;
+            if (!hist) {
+                overlay.innerHTML = `<div style="background:#0d1a2e;border:1px solid #1e3a5f;border-radius:20px;padding:20px;width:100%;max-width:360px;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+                        <div style="color:#5bc8f5;font-weight:600;">יום ${dayNum} 💡</div>
+                        <button onclick="document.getElementById('day-popup-overlay').remove()" style="background:none;border:none;color:#666;font-size:20px;cursor:pointer;">✕</button>
+                    </div>
+                    <div style="font-size:14px;color:#888;">הושלם</div>
+                </div>`;
+            } else {
+                const date = new Date(hist.completedAt).toLocaleDateString('he-IL');
+                const isHard = hardDays.includes(hist.day);
+                overlay.innerHTML = `<div style="background:#0d1a2e;border:1px solid #1e3a5f;border-radius:20px;padding:20px;width:100%;max-width:360px;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+                        <div style="color:#5bc8f5;font-weight:600;">יום ${hist.day} 💡</div>
+                        <button onclick="document.getElementById('day-popup-overlay').remove()" style="background:none;border:none;color:#666;font-size:20px;cursor:pointer;">✕</button>
+                    </div>
+                    <div style="font-size:16px;color:#e0e0e0;font-weight:600;margin-bottom:8px;">${hist.task}</div>
+                    <div style="font-size:13px;color:#888;line-height:1.6;margin-bottom:12px;">${hist.how}</div>
+                    ${isHard ? `<div style="font-size:12px;color:#f5a623;margin-bottom:12px;">★ הייתי שם, ועשיתי את זה בכל זאת.</div>` : ''}
+                    <div style="font-size:11px;color:#444;margin-bottom:14px;">הושלם ב-${date}</div>
+                    <button id="hard-day-btn" onclick="toggleHardDay(${hist.day})"
+                        style="width:100%;padding:10px;border-radius:12px;border:1px solid ${isHard ? '#f5a623' : '#2a3a4a'};background:${isHard ? 'rgba(245,166,35,0.1)' : 'transparent'};color:${isHard ? '#f5a623' : '#555'};font-size:13px;cursor:pointer;">
+                        ${isHard ? '★ יום קשה — הסר סימון' : '☆ סמן כיום קשה'}
+                    </button>
+                </div>`;
+            }
             overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
             document.body.appendChild(overlay);
         }
@@ -1441,7 +1449,7 @@
             document.getElementById('day-popup-overlay')?.remove();
             // פתח שוב את הפופאפ עם הסטייט המעודכן
             const hist = completedHistory.find(h => h.day === day);
-            if (hist) setTimeout(() => showDayPopup(hist), 50);
+            setTimeout(() => showDayPopup(hist, day), 50);
         }
 
         function drawShape() {
