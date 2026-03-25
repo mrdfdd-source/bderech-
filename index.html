@@ -678,7 +678,7 @@
             <div class="lbl">בדרך</div>
             <div style="font-size:16px;color:#e0e0e0;margin-bottom:24px;font-weight:400;">הדרך להצלחה היא הדרך</div>
             <div class="q-text">מה היעד שלך?</div>
-            <textarea id="goal-input" placeholder="למשל: לנגן במפוחית, ללמוד סינית, לרוץ מרתון..."></textarea>
+            <textarea id="goal-input" placeholder="למשל: ללמוד AI, לרוץ מרתון, להקים עסק, לכתוב ספר..."></textarea>
             <button class="btn-main" onclick="startChat()">המשך ←</button>
         </div>
 
@@ -710,24 +710,27 @@
             <div class="lbl">בדרך</div>
             <div class="day-big">יום <b id="current-day">1</b></div>
             <div class="goal-name" id="goal-name"></div>
-            
+            <div id="progress-narrative" style="font-size:12px;color:#444;margin-top:-8px;margin-bottom:4px;text-align:center;"></div>
+
             <div class="map-lbl" id="map-label">המפה שלך</div>
             <div class="map-grid" id="map-grid"></div>
             <div class="shape-area" id="shape-area">
                 <svg id="shape-svg" width="120" height="80" viewBox="0 0 120 80"></svg>
                 <div class="shape-lbl" id="shape-label"></div>
             </div>
-            
+
             <div class="task-card">
                 <div class="task-tag">התנועה של היום</div>
                 <div class="task-txt" id="today-task"></div>
+                <div id="goal-connection" style="font-size:11px;color:#5bc8f5;opacity:0.7;margin:4px 0 0 0;"></div>
                 <div class="how-box">
                     <div class="how-lbl" id="how-lbl">איך בדיוק — 7 דקות</div>
                     <div class="how-txt" id="today-how"></div>
                 </div>
             </div>
-            
+
             <button class="btn-main" id="start-btn" onclick="startTimer()">התחל את התנועה ←</button>
+            <button class="btn-sec" onclick="changeGoal()" style="margin-top:8px;font-size:13px;opacity:0.6;">החלף יעד</button>
         </div>
 
         <!-- מסך 5: טיימר -->
@@ -796,6 +799,24 @@
             <button class="btn-sec" onclick="showScreen('screen-goal')">המשך ללא AI</button>
         </div>
 
+    </div>
+
+    <!-- כפתור מאמן צף -->
+    <button id="coach-fab" onclick="openCoachChat()" style="display:none;position:fixed;bottom:24px;left:20px;width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,#1e4a8a,#0d2245);border:1.5px solid #5bc8f5;color:#5bc8f5;font-size:22px;cursor:pointer;z-index:8000;box-shadow:0 4px 20px rgba(91,200,245,0.3);">💬</button>
+
+    <!-- מודל שיחת מאמן -->
+    <div id="coach-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);align-items:flex-end;justify-content:center;z-index:8500;padding:0 0 0 0;">
+        <div style="background:#0d1a2e;border:1px solid #1e3a5f;border-radius:20px 20px 0 0;width:100%;max-width:480px;max-height:70vh;display:flex;flex-direction:column;padding-bottom:env(safe-area-inset-bottom);">
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:16px 20px 12px;border-bottom:1px solid #1e3a5f;">
+                <div style="color:#5bc8f5;font-weight:600;font-size:15px;">🎯 שוחח עם המאמן</div>
+                <button onclick="closeCoachChat()" style="background:none;border:none;color:#666;font-size:22px;cursor:pointer;">✕</button>
+            </div>
+            <div id="coach-messages" class="msgs" style="flex:1;overflow-y:auto;padding:16px;"></div>
+            <div class="inp-row" style="padding:12px 16px;border-top:1px solid #1e3a5f;">
+                <input class="chat-inp" id="coach-input" placeholder="שאל משהו..." onkeydown="if(event.key==='Enter') sendCoachMessage()"/>
+                <button class="send-btn" onclick="sendCoachMessage()">שלח</button>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -905,6 +926,7 @@
         let allIndices = [];
         let shapeType = 'star';
         let shapeName = '';
+        let completedHistory = []; // [{day, task, how, completedAt}]
 
         let currentDayMinutes = 7;
         let timerInterval = null;
@@ -915,7 +937,7 @@
         function saveState() {
             const state = {
                 currentGoal, goalType, fullPlan, totalMoves, completedMoves,
-                currentDay, litIndices, allIndices, shapeType, shapeName
+                currentDay, litIndices, allIndices, shapeType, shapeName, completedHistory
             };
             localStorage.setItem('bderech_state', JSON.stringify(state));
         }
@@ -935,6 +957,7 @@
                 allIndices = s.allIndices || [];
                 shapeType = s.shapeType || 'star';
                 shapeName = s.shapeName || '';
+                completedHistory = s.completedHistory || [];
                 return fullPlan.length > 0;
             } catch(e) { return false; }
         }
@@ -984,6 +1007,9 @@
         function showScreen(id) {
             document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
             document.getElementById(id).classList.add('active');
+            const hideFab = ['screen-landing', 'screen-goal', 'screen-chat', 'screen-loading', 'screen-apikey'];
+            const fab = document.getElementById('coach-fab');
+            if (fab) fab.style.display = (hideFab.includes(id) || !currentGoal) ? 'none' : 'flex';
         }
 
         function shuffle(array) {
@@ -1015,7 +1041,8 @@
         const PLAN_SYSTEM = `בנה תוכנית 5 ימים להגשמת יעד על סמך השיחה.
 
 חוקים:
-- פעולות קונקרטיות בלבד. דוגמה טובה: "צא מהבית, רוץ ישר 6 דקות, חזור". אסור: "תכנן", "תחשוב", "שקול"
+- כל תנועה חייבת להיות קשורה ישירות ליעד. אם היעד הוא עסק — פעולות עסקיות בלבד. אם ריצה — אימון ריצה בלבד. אסור לתת תנועות כלליות שלא קשורות ליעד
+- פעולות קונקרטיות בלבד. דוגמה טובה לעסק: "כתוב 3 משפטים שמסבירים מה השירות שלך ולמי". אסור: "תכנן", "תחשוב", "שקול"
 - כל פעולה היא בדיוק 7 דקות — לא פחות, לא יותר. ה-how חייב לתאם ל-7 דקות בדיוק
 - הדרגתי ומותאם לרמת המשתמש
 - עברית בלבד
@@ -1189,6 +1216,7 @@
             litIndices = [];
             completedMoves = 0;
             currentDay = 1;
+            completedHistory = [];
 
             document.getElementById('goal-name').textContent = currentGoal;
             loadCurrentDay();
@@ -1209,6 +1237,10 @@
             document.getElementById('how-lbl').textContent = `איך בדיוק — ${currentDayMinutes} דקות`;
             document.getElementById('timer-task').textContent = dayPlan.task;
             document.getElementById('timer-how').textContent = dayPlan.how;
+            const gc = document.getElementById('goal-connection');
+            if (gc && currentGoal) gc.textContent = `← לכיוון: ${currentGoal.length > 35 ? currentGoal.slice(0,35)+'...' : currentGoal}`;
+            const pn = document.getElementById('progress-narrative');
+            if (pn && completedMoves > 0) pn.textContent = `${completedMoves * 7} דקות השקעת בדרך שלך`;
 
             const startBtn = document.getElementById('start-btn');
             const taskCard = document.querySelector('#screen-home .task-card');
@@ -1254,10 +1286,39 @@
             for (let i = 0; i < totalMoves; i++) {
                 const node = document.createElement('div');
                 node.className = 'node';
-                if (litIndices.includes(i)) node.classList.add('lit');
-                else if (completedMoves < totalMoves && i === allIndices[completedMoves]) node.classList.add('current');
+                const litIdx = litIndices.indexOf(i);
+                if (litIdx !== -1) {
+                    node.classList.add('lit');
+                    node.style.cursor = 'pointer';
+                    const hist = completedHistory[litIdx];
+                    if (hist) {
+                        node.onclick = () => showDayPopup(hist);
+                    }
+                } else if (completedMoves < totalMoves && i === allIndices[completedMoves]) {
+                    node.classList.add('current');
+                }
                 mapGrid.appendChild(node);
             }
+        }
+
+        function showDayPopup(hist) {
+            const existing = document.getElementById('day-popup-overlay');
+            if (existing) existing.remove();
+            const date = new Date(hist.completedAt).toLocaleDateString('he-IL');
+            const overlay = document.createElement('div');
+            overlay.id = 'day-popup-overlay';
+            overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);display:flex;align-items:flex-end;justify-content:center;z-index:9000;padding:24px;';
+            overlay.innerHTML = `<div style="background:#0d1a2e;border:1px solid #1e3a5f;border-radius:20px;padding:20px;width:100%;max-width:360px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+                    <div style="color:#5bc8f5;font-weight:600;">יום ${hist.day} 💡</div>
+                    <button onclick="document.getElementById('day-popup-overlay').remove()" style="background:none;border:none;color:#666;font-size:20px;cursor:pointer;">✕</button>
+                </div>
+                <div style="font-size:16px;color:#e0e0e0;font-weight:600;margin-bottom:8px;">${hist.task}</div>
+                <div style="font-size:13px;color:#888;line-height:1.6;margin-bottom:12px;">${hist.how}</div>
+                <div style="font-size:11px;color:#444;">הושלם ב-${date}</div>
+            </div>`;
+            overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
+            document.body.appendChild(overlay);
         }
 
         function drawShape() {
@@ -1283,22 +1344,57 @@
         function completeDay() {
             if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
             const currentIndex = allIndices[completedMoves];
+            const dayPlan = fullPlan[currentDay - 1] || {};
             if (currentIndex !== undefined) litIndices.push(currentIndex);
+            completedHistory.push({
+                day: currentDay,
+                task: dayPlan.task || '',
+                how: dayPlan.how || '',
+                completedAt: Date.now()
+            });
             completedMoves++;
             const completedDayNum = currentDay;
             currentDay++;
 
-            if (completedMoves >= totalMoves) {
-                document.getElementById('finish-message').textContent =
-                    `השלמת ${totalMoves} תנועות.\n${currentGoal}\nכל הכבוד.`;
-                showScreen('screen-finish');
-                return;
+            // הצג טקס עצירה
+            showStopRitual(completedDayNum, completedMoves >= totalMoves);
+        }
+
+        function showStopRitual(dayNum, isFinish) {
+            const overlay = document.createElement('div');
+            overlay.id = 'stop-ritual-overlay';
+            overlay.style.cssText = 'position:fixed;inset:0;background:#0d1a2e;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;text-align:center;padding:32px;';
+
+            let inner = `<div style="font-size:48px;margin-bottom:24px">🫁</div>
+                <div style="font-size:32px;font-weight:300;color:#e0e0e0;margin-bottom:12px">עצור.</div>
+                <div style="font-size:18px;color:#888;margin-bottom:8px">נשום. עשית את זה.</div>`;
+
+            if (dayNum === 7) {
+                inner += `<div style="margin:16px 0;background:#0d2245;border:1px solid #5bc8f5;border-radius:12px;padding:16px 24px;">
+                    <div style="font-size:16px;color:#5bc8f5;font-weight:600;">שבוע שלם. 🔥</div>
+                    <div style="font-size:13px;color:#888;margin-top:6px;">רוב האנשים כבר ויתרו — אתה עדיין כאן.</div>
+                </div>`;
             }
 
-            loadCurrentDay();
-            buildMapDisplay();
-            saveState();
-            showScreen('screen-timepicker');
+            const totalMin = completedMoves * 7;
+            inner += `<div style="font-size:13px;color:#444;margin-top:12px;">${totalMin} דקות השקעת בדרך שלך</div>`;
+
+            overlay.innerHTML = inner;
+            document.body.appendChild(overlay);
+
+            setTimeout(() => {
+                overlay.remove();
+                if (isFinish) {
+                    document.getElementById('finish-message').textContent =
+                        `השלמת ${totalMoves} תנועות.\n${currentGoal}\nכל הכבוד.`;
+                    showScreen('screen-finish');
+                } else {
+                    loadCurrentDay();
+                    buildMapDisplay();
+                    saveState();
+                    showScreen('screen-timepicker');
+                }
+            }, 2800);
         }
 
         async function scheduleNotification(unlockTimeMs, timeStr) {
@@ -1422,6 +1518,77 @@
         }
 
         function goHome() { showScreen('screen-home'); }
+
+        function changeGoal() {
+            const msg = 'להחליף יעד?\n\nהתוכנית הנוכחית תיסגר.\nהתקדמות לא נמחקת — תוכל לחזור.';
+            if (confirm(msg)) {
+                localStorage.removeItem('bderech_state');
+                localStorage.removeItem('bderech_unlock_time');
+                currentGoal = ''; fullPlan = []; currentDay = 1; completedMoves = 0; completedHistory = [];
+                showScreen('screen-goal');
+            }
+        }
+
+        // ===== שיחת מאמן =====
+        let coachHistory = [];
+        let coachOpen = false;
+
+        function openCoachChat() {
+            if (coachOpen) return;
+            coachOpen = true;
+            const modal = document.getElementById('coach-modal');
+            modal.style.display = 'flex';
+            if (coachHistory.length === 0) {
+                document.getElementById('coach-messages').innerHTML = '';
+                addCoachMessage('ai', `שלום! אני המאמן שלך בדרך ל${currentGoal ? currentGoal : 'היעד שלך'}. מה שאלה?`);
+            }
+        }
+
+        function closeCoachChat() {
+            coachOpen = false;
+            document.getElementById('coach-modal').style.display = 'none';
+        }
+
+        async function sendCoachMessage() {
+            const input = document.getElementById('coach-input');
+            const msg = input.value.trim();
+            if (!msg) return;
+            input.value = '';
+            addCoachMessage('user', msg);
+            coachHistory.push({role: 'user', content: msg});
+
+            const dayPlan = fullPlan[currentDay - 1] || {};
+            const context = `יעד: ${currentGoal}. תנועת היום: ${dayPlan.task || ''} — ${dayPlan.how || ''}`;
+            const system = `אתה מאמן אישי באפליקציית "בדרך". ${context}. ענה בעברית קצרה וממוקדת. תמוך, עודד, ועזור.`;
+
+            const thinkDiv = document.createElement('div');
+            thinkDiv.className = 'thinking';
+            thinkDiv.id = 'coach-thinking';
+            thinkDiv.innerHTML = '<span></span><span></span><span></span>';
+            document.getElementById('coach-messages').appendChild(thinkDiv);
+
+            const text = await callClaude(coachHistory, system, 300);
+            const t = document.getElementById('coach-thinking');
+            if (t) t.remove();
+
+            if (text) {
+                coachHistory.push({role: 'assistant', content: text});
+                addCoachMessage('ai', text);
+            }
+        }
+
+        function addCoachMessage(role, text) {
+            const div = document.createElement('div');
+            div.className = `bubble ${role}`;
+            if (role === 'ai') {
+                div.innerHTML = `<span class="who">מאמן</span>${renderMarkdown(text)}`;
+            } else {
+                div.textContent = text;
+            }
+            const container = document.getElementById('coach-messages');
+            container.appendChild(div);
+            container.scrollTop = container.scrollHeight;
+        }
 
         // ===== אתחול =====
         document.addEventListener('DOMContentLoaded', function() {
