@@ -1089,6 +1089,7 @@
         const PLAN_SYSTEM = `אתה מאמן אישי. קיבלת יעד ושיחה עם המשתמש. עכשיו בנה תוכנית 5 ימים.
 
 כלל אחד מוחלט: כל 5 הימים חייבים להיות פעולות ישירות וספציפיות לאותו יעד בדיוק.
+חשוב: אסור להשתמש במרכאות כפולות (") בתוך טקסט ה-task וה-how. השתמש רק בגרש בודד (') אם צריך.
 - יעד "לבשל אומלט" → 5 ימי בישול: תרגול חיתוך, הכנת מרכיבים, בישול ביצים וכו'
 - יעד "להחליף גלגל" → 5 ימים: הכרת הכלים, שחרור ברגים, הרמת רכב וכו'
 - יעד "ללמוד AI" → 5 ימים: קריאת מאמר, ניסוי כלי, כתיבת prompt וכו'
@@ -1223,12 +1224,25 @@
 
         // ===== בניית תוכנית =====
         function extractJSON(text) {
-            // נסה להסיר markdown code blocks
             let clean = text.replace(/```(?:json)?/gi, '').trim();
-            // חפש מערך JSON
             const match = clean.match(/\[[\s\S]*\]/);
-            if (match) return JSON.parse(match[0]);
-            throw new Error('No JSON array found');
+            if (!match) throw new Error('No JSON array found');
+            let jsonStr = match[0];
+            // תקן מרכאות לא מוצאות בתוך ערכי string
+            // החלף " שמופיעות באמצע ערך (לא בתחילת/סוף) ב-'
+            jsonStr = jsonStr.replace(/"([^"]*)"([^,:\[\]{}]*)"/g, (m, p1, p2) => {
+                return `"${p1}${p2.replace(/"/g, "'")}"`;
+            });
+            try {
+                return JSON.parse(jsonStr);
+            } catch(e) {
+                // ניסיון שני: החלף כל " בתוך ערכים ב-'
+                const fixed = jsonStr.replace(/:\s*"([\s\S]*?)"/g, (m, val) => {
+                    const safe = val.replace(/"/g, "'");
+                    return `: "${safe}"`;
+                });
+                return JSON.parse(fixed);
+            }
         }
 
         async function buildPlan() {
