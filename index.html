@@ -1389,28 +1389,31 @@
             document.getElementById('shape-area').style.display = revealShape ? 'block' : 'none';
             if (revealShape) drawShape();
             for (let i = 0; i < totalMoves; i++) {
-                const node = document.createElement('div');
-                node.className = 'node';
                 const litIdx = litIndices.indexOf(i);
                 if (litIdx !== -1) {
-                    node.classList.add('lit');
-                    node.style.cursor = 'pointer';
-                    node.style.position = 'relative';
+                    // נוד מואר — button לtouchability מובנית
+                    const node = document.createElement('button');
+                    node.className = 'node lit';
+                    node.style.cssText = 'position:relative;padding:0;border:none;flex-shrink:0;';
                     const hist = completedHistory[litIdx];
                     if (hist && hardDays.includes(hist.day)) {
                         node.style.boxShadow = '0 0 0 2px #f5a623';
                         const star = document.createElement('span');
                         star.textContent = '★';
-                        star.style.cssText = 'position:absolute;top:-5px;right:-5px;font-size:8px;color:#f5a623;line-height:1;';
+                        star.style.cssText = 'position:absolute;top:-5px;right:-5px;font-size:8px;color:#f5a623;line-height:1;pointer-events:none;';
                         node.appendChild(star);
                     }
                     const _h = hist, _n = litIdx + 1;
-                    node.addEventListener('click', () => showDayPopup(_h, _n));
-                    node.addEventListener('touchend', (e) => { e.preventDefault(); showDayPopup(_h, _n); });
-                } else if (completedMoves < totalMoves && i === allIndices[completedMoves]) {
-                    node.classList.add('current');
+                    node.onclick = () => showDayPopup(_h, _n);
+                    mapGrid.appendChild(node);
+                } else {
+                    const node = document.createElement('div');
+                    node.className = 'node';
+                    if (completedMoves < totalMoves && i === allIndices[completedMoves]) {
+                        node.classList.add('current');
+                    }
+                    mapGrid.appendChild(node);
                 }
-                mapGrid.appendChild(node);
             }
         }
 
@@ -1701,8 +1704,8 @@
             const dayPlan = fullPlan[currentDay - 1] || {};
             const context = `יעד: ${currentGoal}. תנועת היום (יום ${currentDay}): ${dayPlan.task || ''} — ${dayPlan.how || ''}`;
             const system = `אתה מאמן אישי באפליקציית "בדרך". ${context}.
-חוק אחד: אל תחשוף תנועות של ימים עתידיים. אם שואלים מה מחר — תגיב בקצרה ובטבעיות, בסגנון: "לא מגלה — זה הסוד של השיטה 😄"
-ענה בעברית קצרה וממוקדת. תמוך, עודד, ועזור רק לגבי היום הנוכחי.`;
+כלל מוחלט: אם המשתמש שואל על מחר, על תנועות עתידיות, על ימים הבאים — ענה בדיוק: "לא מגלה — זה הסוד של השיטה 😄" ותו לא. אל תוסיף שום הסבר, סיפור, או מידע נוסף.
+ענה בעברית קצרה בלבד. אל תשתמש ב-markdown, ב-# כותרות, או ב--- מפרידים. טקסט פשוט בלבד.`;
 
             const thinkDiv = document.createElement('div');
             thinkDiv.className = 'thinking';
