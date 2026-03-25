@@ -1222,6 +1222,15 @@
         }
 
         // ===== בניית תוכנית =====
+        function extractJSON(text) {
+            // נסה להסיר markdown code blocks
+            let clean = text.replace(/```(?:json)?/gi, '').trim();
+            // חפש מערך JSON
+            const match = clean.match(/\[[\s\S]*\]/);
+            if (match) return JSON.parse(match[0]);
+            throw new Error('No JSON array found');
+        }
+
         async function buildPlan() {
             showScreen('screen-loading');
 
@@ -1233,19 +1242,21 @@
                     .join('\n');
 
                 const text = await callClaude(
-                    [{role: 'user', content: `יעד: ${currentGoal}\nשיחה:\n${convSummary}\n\nבנה תוכנית 5 ימים.`}],
-                    PLAN_SYSTEM, 800
+                    [{role: 'user', content: `יעד: ${currentGoal}\nשיחה:\n${convSummary}\n\nבנה תוכנית 5 ימים ספציפית ל"${currentGoal}".`}],
+                    PLAN_SYSTEM, 1000
                 );
+
+                console.log('Plan AI response:', text);
 
                 if (text) {
                     try {
-                        const match = text.match(/\[[\s\S]*\]/);
-                        if (match) {
-                            fullPlan = JSON.parse(match[0]);
+                        const parsed = extractJSON(text);
+                        if (Array.isArray(parsed) && parsed.length > 0) {
+                            fullPlan = parsed;
                             initPlan(meta.totalMoves, meta.shape, meta.shapeLabel);
                             return;
                         }
-                    } catch(e) { console.error('Plan parse error:', e); }
+                    } catch(e) { console.error('Plan parse error:', e, '\nRaw:', text); }
                 }
             }
 
