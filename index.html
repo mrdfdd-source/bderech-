@@ -352,7 +352,13 @@
             background: #5bc8f5;
             border-color: #5bc8f5;
             box-shadow: 0 0 8px rgba(255, 140, 0, 0.6);
-            touch-action: manipulation; 
+            touch-action: manipulation;
+            position: relative;
+        }
+        .node.lit::after {
+            content: '';
+            position: absolute;
+            inset: -14px; 
         }
         .node.current { 
             background: transparent; 
