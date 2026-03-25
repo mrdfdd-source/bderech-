@@ -4,3 +4,6 @@ dist/
 server/data/*.db
 *.log
 .DS_Store
+*.docx
+~$*
+package-lock.json
