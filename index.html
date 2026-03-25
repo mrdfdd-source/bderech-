@@ -1681,8 +1681,10 @@
             coachHistory.push({role: 'user', content: msg});
 
             const dayPlan = fullPlan[currentDay - 1] || {};
-            const context = `יעד: ${currentGoal}. תנועת היום: ${dayPlan.task || ''} — ${dayPlan.how || ''}`;
-            const system = `אתה מאמן אישי באפליקציית "בדרך". ${context}. ענה בעברית קצרה וממוקדת. תמוך, עודד, ועזור.`;
+            const context = `יעד: ${currentGoal}. תנועת היום (יום ${currentDay}): ${dayPlan.task || ''} — ${dayPlan.how || ''}`;
+            const system = `אתה מאמן אישי באפליקציית "בדרך". ${context}.
+חוק אחד מוחלט: אסור בשום פנים לחשוף תנועות של ימים עתידיים. אם שואלים מה יהיה מחר או בימים הבאים — ענה בחמימות שזה מפתיע, שיגיע בזמנו, ושהיום הזה הוא מה שחשוב עכשיו.
+ענה בעברית קצרה וממוקדת. תמוך, עודד, ועזור רק לגבי היום הנוכחי.`;
 
             const thinkDiv = document.createElement('div');
             thinkDiv.className = 'thinking';
