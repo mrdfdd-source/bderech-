@@ -1,5 +1,5 @@
 // ===== Service Worker - בדרך =====
-const CACHE_NAME = 'bderech-v5';
+const CACHE_NAME = 'bderech-v6';
 const URLS_TO_CACHE = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png'];
 
 // ===== התקנה: שמור קבצים ב-cache =====
@@ -10,20 +10,39 @@ self.addEventListener('install', event => {
     );
 });
 
-// ===== הפעלה: נקה cache ישן =====
+// ===== הפעלה: נקה cache ישן + הודע לכל הלקוחות לרענן =====
 self.addEventListener('activate', event => {
     event.waitUntil(
         caches.keys().then(keys =>
             Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))
         ).then(() => self.clients.claim())
+          .then(() => self.clients.matchAll({ type: 'window' }))
+          .then(clients => clients.forEach(client => client.postMessage({ type: 'SW_UPDATED' })))
     );
 });
 
-// ===== Fetch: הגש מ-cache כשאין אינטרנט =====
+// ===== Fetch: network-first לדף הראשי, cache-first לשאר =====
 self.addEventListener('fetch', event => {
-    event.respondWith(
-        caches.match(event.request).then(cached => cached || fetch(event.request))
-    );
+    const url = new URL(event.request.url);
+    const isPage = url.pathname.endsWith('/') || url.pathname.endsWith('index.html');
+
+    if (isPage) {
+        // network-first — תמיד נסה לקבל גרסה עדכנית
+        event.respondWith(
+            fetch(event.request)
+                .then(response => {
+                    const clone = response.clone();
+                    caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
+                    return response;
+                })
+                .catch(() => caches.match(event.request))
+        );
+    } else {
+        // cache-first לתמונות, manifest וכו'
+        event.respondWith(
+            caches.match(event.request).then(cached => cached || fetch(event.request))
+        );
+    }
 });
 
 // ===== הודעות מהדף הראשי =====
@@ -34,15 +53,12 @@ self.addEventListener('message', event => {
         const delay = unlockTime - Date.now();
 
         if (delay <= 0) {
-            // כבר הגיע הזמן — שלח מיד
             fireNotification();
             return;
         }
 
-        // בטל תזכורת קודמת אם קיימת
         if (self._notifTimeout) clearTimeout(self._notifTimeout);
 
-        // תזמן תזכורת
         self._notifTimeout = setTimeout(() => {
             fireNotification();
         }, delay);
@@ -57,7 +73,6 @@ self.addEventListener('periodicsync', event => {
 });
 
 async function checkAndNotify() {
-    // גישה ל-IndexedDB לבדיקת זמן פתיחה
     try {
         const time = await getNotifTime();
         if (time && Date.now() >= time) {
@@ -88,14 +103,12 @@ function fireNotification() {
 self.addEventListener('notificationclick', event => {
     event.notification.close();
     if (event.action === 'snooze') {
-        // דחה שעה
         const newTime = Date.now() + 60 * 60 * 1000;
         if (self._notifTimeout) clearTimeout(self._notifTimeout);
         self._notifTimeout = setTimeout(fireNotification, 60 * 60 * 1000);
         saveNotifTime(newTime);
         return;
     }
-    // פתח את האפליקציה
     event.waitUntil(
         self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clients => {
             const existing = clients.find(c => c.url.includes('bderech'));

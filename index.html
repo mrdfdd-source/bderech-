@@ -1813,6 +1813,13 @@
                         console.log('SW רשום:', reg.scope);
                     })
                     .catch(err => console.log('SW נכשל:', err));
+
+                // עדכון אוטומטי — כשה-SW החדש מופעל, רענן את הדף
+                navigator.serviceWorker.addEventListener('message', event => {
+                    if (event.data && event.data.type === 'SW_UPDATED') {
+                        window.location.reload();
+                    }
+                });
             });
         }
     </script>
