@@ -401,11 +401,11 @@
             text-transform: uppercase;
             font-weight: 600;
         }
-        .task-txt { 
-            font-size: 18px; 
-            color: #fff; 
-            font-weight: 700; 
-            line-height: 1.4; 
+        .task-txt {
+            font-size: 22px;
+            color: #fff;
+            font-weight: 700;
+            line-height: 1.4;
         }
         .how-box { 
             background: #0a0e14; 
@@ -991,6 +991,31 @@
             localStorage.setItem('bderech_state', JSON.stringify(state));
         }
 
+        function saveChatState() {
+            if (currentGoal && chatHistory.length > 1) {
+                localStorage.setItem('bderech_chat', JSON.stringify({
+                    currentGoal, goalType, chatHistory, isReadyToBuild
+                }));
+            }
+        }
+
+        function clearChatState() {
+            localStorage.removeItem('bderech_chat');
+        }
+
+        function loadChatState() {
+            const raw = localStorage.getItem('bderech_chat');
+            if (!raw) return false;
+            try {
+                const s = JSON.parse(raw);
+                currentGoal = s.currentGoal || '';
+                goalType = s.goalType || '';
+                chatHistory = s.chatHistory || [];
+                isReadyToBuild = s.isReadyToBuild || false;
+                return chatHistory.length > 1;
+            } catch(e) { return false; }
+        }
+
         function loadState() {
             const raw = localStorage.getItem('bderech_state');
             if (!raw) return false;
@@ -1075,16 +1100,17 @@
         }
 
         // ===== שיחת AI =====
-        const CHAT_SYSTEM = `אתה עוזר אפליקציית "בדרך". משתמש רוצה להגשים יעד.
+        const CHAT_SYSTEM = `אתה חבר-מאמן חם — לא רובוט, לא פורמלי. אתה עוזר למשתמש להגשים יעד באפליקציית "בדרך".
 
 חוקים:
-- שאל רק מה שחסר לך — אל תשאל על מה שכבר ידוע מהיעד
 - שאלה אחת בכל פעם, מקסימום 3-4 שאלות סה"כ
+- שאל רק מה שחסר — לא מה שברור מהיעד
 - אל תשאל כמה זמן יש למשתמש — כולם עושים 7 דקות ביום, זו השיטה
 - כשיש לך מספיק — כתוב בדיוק: "יש לי מה שצריך"
-- עברית טבעית וקצרה
+- עברית יומיומית, חמה — כמו שחבר שואל. קצר ולעניין
+- הבן הקשר ושפה יומיומית: "בא לי לקום בבוקר ולהרגיש שלמה" = רוצה להרגיש טוב יותר, לא שאלה על שעת קימה
 
-שאלות לפי סוג יעד (שאל רק מה שרלוונטי וחסר):
+שאלות לפי סוג יעד (שאל רק מה שרלוונטי):
 - ריצה / מרתון: רמת כושר נוכחית, נעלי ריצה
 - מפוחית / גיטרה / כלי נגינה: האם יש כלי בבית, ניסיון מוזיקלי קודם
 - שפה זרה: רמה נוכחית, האם לומד בקורס/בנוסף
@@ -1117,6 +1143,7 @@
 
             chatHistory = [{role: 'user', content: `היעד שלי: ${currentGoal}`}];
             isReadyToBuild = false;
+            clearChatState();
 
             document.getElementById('chat-messages').innerHTML = '';
             document.getElementById('send-button').textContent = 'שלח';
@@ -1166,6 +1193,7 @@
                 document.getElementById('send-button').textContent = 'בנה תוכנית ←';
                 document.getElementById('send-button').onclick = buildPlan;
             }
+            saveChatState();
         }
 
         function renderMarkdown(text) {
@@ -1226,6 +1254,7 @@
             input.value = '';
             addMessage('user', message);
             chatHistory.push({role: 'user', content: message});
+            saveChatState();
 
             askWithAI();
         }
@@ -1312,6 +1341,7 @@
         }
 
         function initPlan(moves, shape, label) {
+            clearChatState();
             localStorage.removeItem('bderech_unlock_time');
             totalMoves = moves;
             shapeType = shape;
@@ -1684,7 +1714,7 @@
             modal.style.display = 'flex';
             if (coachHistory.length === 0) {
                 document.getElementById('coach-messages').innerHTML = '';
-                addCoachMessage('ai', `שלום! אני המאמן שלך בדרך ל${currentGoal ? currentGoal : 'היעד שלך'}. מה שאלה?`);
+                addCoachMessage('ai', 'היי, רצית לשאול משהו?');
             }
         }
 
@@ -1703,9 +1733,10 @@
 
             const dayPlan = fullPlan[currentDay - 1] || {};
             const context = `יעד: ${currentGoal}. תנועת היום (יום ${currentDay}): ${dayPlan.task || ''} — ${dayPlan.how || ''}`;
-            const system = `אתה מאמן אישי באפליקציית "בדרך". ${context}.
-כלל מוחלט: אם המשתמש שואל על מחר, על תנועות עתידיות, על ימים הבאים — ענה בדיוק: "לא מגלה — זה הסוד של השיטה 😄" ותו לא. אל תוסיף שום הסבר, סיפור, או מידע נוסף.
-ענה בעברית קצרה בלבד. אל תשתמש ב-markdown, ב-# כותרות, או ב--- מפרידים. טקסט פשוט בלבד.`;
+            const system = `אתה חבר-מאמן חם ואנושי של המשתמש באפליקציית "בדרך". ${context}.
+אתה מכיר אותו, מדבר אליו בגובה העיניים — בחמלה, הבנה, ואפילו עם טיפת הומור כשמתאים. לא רובוט, לא פורמלי.
+כלל מוחלט: אם המשתמש שואל על מחר, על תנועות עתידיות, על ימים הבאים — ענה בדיוק: "לא מגלה — זה הסוד של השיטה 😄" ותו לא.
+עברית יומיומית קצרה. ללא markdown, ללא כותרות, ללא מפרידים. טקסט פשוט.`;
 
             const thinkDiv = document.createElement('div');
             thinkDiv.className = 'thinking';
@@ -1751,6 +1782,22 @@
                 loadCurrentDay();
                 buildMapDisplay();
                 showScreen('screen-home');
+            } else if (loadChatState()) {
+                document.getElementById('goal-display').textContent = currentGoal;
+                document.getElementById('chat-messages').innerHTML = '';
+                chatHistory.forEach(msg => {
+                    if (msg.role === 'user' && msg.content.startsWith('היעד שלי:')) return;
+                    addMessage(msg.role === 'user' ? 'user' : 'ai', msg.content);
+                });
+                if (isReadyToBuild) {
+                    document.getElementById('send-button').textContent = 'בנה תוכנית ←';
+                    document.getElementById('send-button').onclick = buildPlan;
+                } else {
+                    document.getElementById('send-button').textContent = 'שלח';
+                    document.getElementById('send-button').onclick = sendMessage;
+                }
+                document.getElementById('send-button').disabled = false;
+                showScreen('screen-chat');
             } else {
                 showScreen('screen-landing');
             }
