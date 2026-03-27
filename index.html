@@ -402,7 +402,7 @@
             font-weight: 600;
         }
         .task-txt {
-            font-size: 22px;
+            font-size: 26px;
             color: #fff;
             font-weight: 700;
             line-height: 1.4;
@@ -1539,8 +1539,7 @@
             overlay.id = 'stop-ritual-overlay';
             overlay.style.cssText = 'position:fixed;inset:0;background:#0d1a2e;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;text-align:center;padding:32px;';
 
-            let inner = `<div style="font-size:48px;margin-bottom:24px">🫁</div>
-                <div style="font-size:32px;font-weight:300;color:#e0e0e0;margin-bottom:12px">עצור.</div>
+            let inner = `<div style="font-size:32px;font-weight:300;color:#e0e0e0;margin-bottom:12px">עצור.</div>
                 <div style="font-size:18px;color:#888;margin-bottom:8px">נשום. עשית את זה.</div>`;
 
             if (dayNum === 7) {
@@ -1733,10 +1732,11 @@
 
             const dayPlan = fullPlan[currentDay - 1] || {};
             const context = `יעד: ${currentGoal}. תנועת היום (יום ${currentDay}): ${dayPlan.task || ''} — ${dayPlan.how || ''}`;
-            const system = `אתה חבר-מאמן חם ואנושי של המשתמש באפליקציית "בדרך". ${context}.
-אתה מכיר אותו, מדבר אליו בגובה העיניים — בחמלה, הבנה, ואפילו עם טיפת הומור כשמתאים. לא רובוט, לא פורמלי.
-כלל מוחלט: אם המשתמש שואל על מחר, על תנועות עתידיות, על ימים הבאים — ענה בדיוק: "לא מגלה — זה הסוד של השיטה 😄" ותו לא.
-עברית יומיומית קצרה. ללא markdown, ללא כותרות, ללא מפרידים. טקסט פשוט.`;
+            const system = `אתה מאמן אישי חם ומעודד. ${context}.
+הסגנון שלך: קצר, אנושי, שמח — כמו מישהו שבאמת שמח על ההצלחות של המשתמש. עברית יומיומית, לא רשמית. מקסימום 2-3 משפטים.
+תמיד תעודד — כל דבר שהוא עשה הוא טוב. תסיים עם משהו שמדרבן אותו להשלים את התנועה היומית.
+אם שואלים על מחר או ימים הבאים — רק: "לא מגלה, זה הסוד של השיטה."
+ללא emojis, ללא markdown, ללא כותרות. טקסט פשוט בלבד.`;
 
             const thinkDiv = document.createElement('div');
             thinkDiv.className = 'thinking';
@@ -1744,7 +1744,7 @@
             thinkDiv.innerHTML = '<span></span><span></span><span></span>';
             document.getElementById('coach-messages').appendChild(thinkDiv);
 
-            const text = await callClaude(coachHistory, system, 300);
+            const text = await callClaude(coachHistory, system, 120);
             const t = document.getElementById('coach-thinking');
             if (t) t.remove();
 

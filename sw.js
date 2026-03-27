@@ -1,5 +1,5 @@
 // ===== Service Worker - בדרך =====
-const CACHE_NAME = 'bderech-v6';
+const CACHE_NAME = 'bderech-v7';
 const URLS_TO_CACHE = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png'];
 
 // ===== התקנה: שמור קבצים ב-cache =====
