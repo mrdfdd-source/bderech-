@@ -666,6 +666,31 @@
         .screen-copyright { text-align: center; font-size: 10px; color: #3a5575; margin-top: auto; padding-top: 14px; padding-bottom: 4px; flex-shrink: 0; line-height: 1.5; }
     </style>
     <script src="./aiCoach.js"></script>
+    <!-- OneSignal Push Notifications -->
+    <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+    <script>
+        window.OneSignalDeferred = window.OneSignalDeferred || [];
+        OneSignalDeferred.push(async function(OneSignal) {
+            await OneSignal.init({
+                appId: "ONESIGNAL_APP_ID_HERE",
+                notifyButton: { enable: false },
+                promptOptions: {
+                    slidedown: {
+                        enabled: true,
+                        actionMessage: "בדרך רוצה לשלוח לך תזכורת יומית 💙",
+                        acceptButtonText: "כן, תזכיר לי",
+                        cancelButtonText: "אחר כך"
+                    }
+                }
+            });
+        });
+
+        function requestPushPermission() {
+            if (window.OneSignal) {
+                OneSignal.Slidedown.promptPush();
+            }
+        }
+    </script>
 </head>
 <body>
     <div class="app">
@@ -720,6 +745,7 @@
             <div class="day-big">יום <b id="current-day">1</b></div>
             <div class="goal-name" id="goal-name"></div>
             <div id="progress-narrative" style="font-size:12px;color:#444;margin-top:-8px;margin-bottom:4px;text-align:center;"></div>
+            <div id="streak-display" style="display:none;text-align:center;margin-bottom:6px;"></div>
 
             <div class="map-lbl" id="map-label">המפה שלך</div>
             <div class="map-grid" id="map-grid"></div>
@@ -977,6 +1003,9 @@
         let shapeName = '';
         let completedHistory = []; // [{day, task, how, completedAt}]
         let hardDays = []; // מערך של מספרי ימים שסומנו כ"יום קשה"
+        let streak = 0;
+        let lastCompletedDate = '';
+        let cycleNumber = 1;
 
         let currentDayMinutes = 7;
         let timerInterval = null;
@@ -987,7 +1016,8 @@
         function saveState() {
             const state = {
                 currentGoal, goalType, fullPlan, totalMoves, completedMoves,
-                currentDay, litIndices, allIndices, shapeType, shapeName, completedHistory, hardDays
+                currentDay, litIndices, allIndices, shapeType, shapeName, completedHistory, hardDays,
+                streak, lastCompletedDate, cycleNumber
             };
             localStorage.setItem('bderech_state', JSON.stringify(state));
         }
@@ -1034,6 +1064,9 @@
                 shapeName = s.shapeName || '';
                 completedHistory = s.completedHistory || [];
                 hardDays = s.hardDays || [];
+                streak = s.streak || 0;
+                lastCompletedDate = s.lastCompletedDate || '';
+                cycleNumber = s.cycleNumber || 1;
                 return fullPlan.length > 0;
             } catch(e) { return false; }
         }
@@ -1353,6 +1386,10 @@
             currentDay = 1;
             completedHistory = [];
             hardDays = [];
+            streak = 0;
+            lastCompletedDate = '';
+            cycleNumber = 1;
+            localStorage.removeItem('bderech_achievements');
 
             document.getElementById('goal-name').textContent = currentGoal;
             loadCurrentDay();
@@ -1363,7 +1400,8 @@
 
         // ===== ממשק ימים ומפה =====
         function loadCurrentDay() {
-            const dayPlan = fullPlan[currentDay - 1] || fullPlan[fullPlan.length - 1] || {
+            const cycleIdx = fullPlan.length > 0 ? (currentDay - 1) % fullPlan.length : 0;
+            const dayPlan = fullPlan[cycleIdx] || {
                 task: "המשך את המסע", how: "עשה צעד נוסף קדימה.", minutes: 7
             };
             currentDayMinutes = Math.min(dayPlan.minutes || 7, 7);
@@ -1383,14 +1421,36 @@
             if (isLocked()) {
                 if (startBtn) { startBtn.style.display = 'none'; }
                 if (taskCard) {
-                    taskCard.innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:28px;text-align:center;">' +
-                        '<div style="font-size:36px">🔒</div>' +
-                        '<div style="font-size:17px;color:#e0e0e0;font-weight:700;">יום ' + currentDay + ' — התנועה נעולה</div>' +
-                        '<div style="font-size:13px;color:#5bc8f5;font-weight:600;">היעד: ' + currentGoal + '</div>' +
-                        '<div style="font-size:12px;color:#666;line-height:1.6;">נפתח מחר ב־' + formatUnlockTime(getUnlockTime()) + '</div>' +
-                        '<div id="countdown-display" style="font-size:30px;color:#5bc8f5;font-weight:300;font-variant-numeric:tabular-nums;letter-spacing:3px;">--:--:--</div>' +
-                        '<div style="font-size:11px;color:#444;">שמור אנרגיה למחר — המשכיות היא הסוד</div>' +
-                        '</div>';
+                    const lastHist = completedHistory[completedHistory.length - 1];
+                const reflections = [
+                    'מה הרגשת אחרי אתמול?',
+                    'מה הלך טוב? מה היה קשה?',
+                    'מה גילית על עצמך אתמול?',
+                    'אחד דבר שתיקח מאתמול קדימה?'
+                ];
+                const reflQ = reflections[completedMoves % reflections.length];
+                const tomorrowTask = dayPlan ? dayPlan.task : '';
+                taskCard.innerHTML =
+                    '<div style="display:flex;flex-direction:column;gap:16px;padding:20px 16px;">' +
+                    // כותרת נעילה
+                    '<div style="text-align:center;">' +
+                        '<div style="font-size:28px;margin-bottom:6px">🔒</div>' +
+                        '<div style="font-size:16px;color:#e0e0e0;font-weight:700;">יום ' + currentDay + ' נפתח ב־' + formatUnlockTime(getUnlockTime()) + '</div>' +
+                        '<div id="countdown-display" style="font-size:26px;color:#5bc8f5;font-weight:300;font-variant-numeric:tabular-nums;letter-spacing:2px;margin-top:4px;">--:--:--</div>' +
+                    '</div>' +
+                    // שאלת רפלקציה
+                    (lastHist ? '<div style="background:#0d2040;border-radius:12px;padding:14px 16px;">' +
+                        '<div style="font-size:11px;color:#5bc8f5;letter-spacing:1px;margin-bottom:6px;font-weight:600;">💭 רגע לחשוב</div>' +
+                        '<div style="font-size:14px;color:#ccc;line-height:1.6;">' + reflQ + '</div>' +
+                        '<div style="font-size:11px;color:#444;margin-top:6px;">אתמול: ' + (lastHist.task || '') + '</div>' +
+                    '</div>' : '') +
+                    // הצצה למחר
+                    (tomorrowTask ? '<div style="background:#0a1a30;border:1px solid #1e3a5a;border-radius:12px;padding:14px 16px;">' +
+                        '<div style="font-size:11px;color:#5bc8f5;letter-spacing:1px;margin-bottom:6px;font-weight:600;">👀 מחר</div>' +
+                        '<div style="font-size:14px;color:#e0e0e0;font-weight:600;">' + tomorrowTask + '</div>' +
+                    '</div>' : '') +
+                    '<div style="font-size:11px;color:#333;text-align:center;">שמור אנרגיה למחר — המשכיות היא הסוד</div>' +
+                    '</div>';
                     if (window._countdownInterval) clearInterval(window._countdownInterval);
                     window._countdownInterval = setInterval(() => {
                         const remaining = getUnlockTime() - Date.now();
@@ -1410,6 +1470,8 @@
             } else {
                 if (startBtn) { startBtn.style.display = 'block'; startBtn.disabled = false; startBtn.textContent = 'התחל את התנועה ←'; }
             }
+            updateStreakDisplay();
+            checkReturnAfterAbsence();
         }
 
         function buildMapDisplay() {
@@ -1516,6 +1578,102 @@
             svg.appendChild(path);
         }
 
+        // ===== Streak + הישגים =====
+        const ACHIEVEMENTS = [
+            { id: 'first',        moves: 1,  streak: 0,  emoji: '🎯', title: 'הצעד הראשון!',  msg: 'ויתרת? לא. עשית? כן.' },
+            { id: 'three_streak', moves: 0,  streak: 3,  emoji: '🔥', title: '3 ימים ברצף!',  msg: 'הרגל מתחיל להיווצר.' },
+            { id: 'five_moves',   moves: 5,  streak: 0,  emoji: '⚡', title: '5 תנועות!',     msg: 'כבר לא "התחלתי" — אתה בדרך.' },
+            { id: 'week_streak',  moves: 0,  streak: 7,  emoji: '🔥🔥',title: 'שבוע שלם!',    msg: 'רוב האנשים כבר ויתרו. לא אתה.' },
+            { id: 'ten_moves',    moves: 10, streak: 0,  emoji: '💫', title: '10 תנועות!',    msg: 'משהו אמיתי קורה כאן.' },
+            { id: 'two_weeks',    moves: 0,  streak: 14, emoji: '💎', title: 'שבועיים!',       msg: 'זה כבר לא מקרי. זה אתה.' },
+            { id: 'twenty_one',   moves: 21, streak: 0,  emoji: '🌟', title: '21 תנועות!',    msg: '3 שבועות. זה כבר חלק ממך.' },
+            { id: 'month_streak', moves: 0,  streak: 30, emoji: '🏆', title: 'חודש שלם!',     msg: 'נדיר. באמת נדיר.' },
+            { id: 'fifty_moves',  moves: 50, streak: 0,  emoji: '🏆', title: '50 תנועות!',    msg: 'חצי מאה. זה זהב.' },
+        ];
+
+        function todayStr() {
+            return new Date().toISOString().split('T')[0];
+        }
+
+        function calcStreak() {
+            const today = todayStr();
+            if (!lastCompletedDate) {
+                streak = 1;
+            } else {
+                const yesterday = new Date();
+                yesterday.setDate(yesterday.getDate() - 1);
+                const yStr = yesterday.toISOString().split('T')[0];
+                // אם השלים אתמול או אותו יום (שמירה כפולה) — ממשיך streak
+                streak = (lastCompletedDate === yStr || lastCompletedDate === today) ? streak + 1 : 1;
+            }
+            lastCompletedDate = today;
+        }
+
+        function checkAchievements() {
+            const unlockedIds = JSON.parse(localStorage.getItem('bderech_achievements') || '[]');
+            for (const ach of ACHIEVEMENTS) {
+                if (unlockedIds.includes(ach.id)) continue;
+                const movesOk = !ach.moves || completedMoves >= ach.moves;
+                const streakOk = !ach.streak || streak >= ach.streak;
+                if (movesOk && streakOk) {
+                    unlockedIds.push(ach.id);
+                    localStorage.setItem('bderech_achievements', JSON.stringify(unlockedIds));
+                    return ach;
+                }
+            }
+            return null;
+        }
+
+        function showAchievementPopup(ach, callback) {
+            const overlay = document.createElement('div');
+            overlay.style.cssText = 'position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:10000;background:rgba(0,0,0,0.65);';
+            overlay.innerHTML = `<div style="background:#0d1a2e;border:2px solid #5bc8f5;border-radius:24px;padding:36px 32px;text-align:center;max-width:300px;width:90%;animation:achPop 0.4s cubic-bezier(.34,1.56,.64,1);">
+                <div style="font-size:54px;margin-bottom:14px;">${ach.emoji}</div>
+                <div style="font-size:22px;font-weight:700;color:#5bc8f5;margin-bottom:10px;">${ach.title}</div>
+                <div style="font-size:15px;color:#aaa;line-height:1.6;">${ach.msg}</div>
+            </div>`;
+            if (!document.getElementById('ach-style')) {
+                const s = document.createElement('style');
+                s.id = 'ach-style';
+                s.textContent = '@keyframes achPop{from{transform:scale(0.6);opacity:0}to{transform:scale(1);opacity:1}}';
+                document.head.appendChild(s);
+            }
+            document.body.appendChild(overlay);
+            setTimeout(() => { overlay.remove(); callback(); }, 2200);
+        }
+
+        function checkReturnAfterAbsence() {
+            if (!lastCompletedDate || !completedMoves) return;
+            const today = todayStr();
+            if (lastCompletedDate === today) return;
+            const daysSince = Math.floor((new Date(today) - new Date(lastCompletedDate)) / 86400000);
+            if (daysSince < 2) return;
+
+            const overlay = document.createElement('div');
+            overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.88);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9500;text-align:center;padding:32px;';
+            const daysMsg = daysSince === 1 ? 'פספסת יום אחד.' : `פספסת ${daysSince} ימים.`;
+            overlay.innerHTML = `
+                <div style="font-size:48px;margin-bottom:18px;">👋</div>
+                <div style="font-size:26px;font-weight:300;color:#e0e0e0;margin-bottom:10px;">כיף שחזרת!</div>
+                <div style="font-size:15px;color:#888;margin-bottom:8px;line-height:1.7;">${daysMsg}<br>זה בסדר לגמרי. הדרך ממשיכה.</div>
+                <div style="font-size:13px;color:#5bc8f5;margin-bottom:28px;">יום ${currentDay} מחכה לך 💙</div>
+                <button onclick="this.parentElement.remove()" style="background:#5bc8f5;color:#1a2744;border:none;border-radius:12px;padding:16px 44px;font-size:16px;font-weight:800;cursor:pointer;font-family:inherit;">ממשיכים ←</button>
+            `;
+            document.body.appendChild(overlay);
+        }
+
+        function updateStreakDisplay() {
+            const el = document.getElementById('streak-display');
+            if (!el) return;
+            if (streak >= 2) {
+                const fire = streak >= 14 ? '🔥🔥🔥' : streak >= 7 ? '🔥🔥' : '🔥';
+                el.style.display = 'block';
+                el.innerHTML = `<span style="font-size:13px;color:#f5a623;font-weight:600;">${fire} ${streak} ימים ברצף</span>`;
+            } else {
+                el.style.display = 'none';
+            }
+        }
+
         function completeDay() {
             if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
             const currentIndex = allIndices[completedMoves];
@@ -1530,12 +1688,21 @@
             completedMoves++;
             const completedDayNum = currentDay;
             currentDay++;
+            calcStreak();
+            saveState();
 
-            // הצג טקס עצירה
-            showStopRitual(completedDayNum, completedMoves >= totalMoves);
+            const isFinish = completedMoves >= totalMoves;
+            const isCycleEnd = !isFinish && completedMoves % 5 === 0;
+
+            const ach = checkAchievements();
+            if (ach) {
+                showAchievementPopup(ach, () => showStopRitual(completedDayNum, isFinish, isCycleEnd));
+            } else {
+                showStopRitual(completedDayNum, isFinish, isCycleEnd);
+            }
         }
 
-        function showStopRitual(dayNum, isFinish) {
+        function showStopRitual(dayNum, isFinish, isCycleEnd) {
             const overlay = document.createElement('div');
             overlay.id = 'stop-ritual-overlay';
             overlay.style.cssText = 'position:fixed;inset:0;background:#0d1a2e;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;text-align:center;padding:32px;';
@@ -1543,10 +1710,21 @@
             let inner = `<div style="font-size:32px;font-weight:300;color:#e0e0e0;margin-bottom:12px">עצור.</div>
                 <div style="font-size:18px;color:#888;margin-bottom:8px">נשום. עשית את זה.</div>`;
 
-            if (dayNum === 7) {
+            if (streak >= 2) {
+                const fire = streak >= 14 ? '🔥🔥🔥' : streak >= 7 ? '🔥🔥' : '🔥';
+                const streakMsg = streak >= 14 ? 'שבועיים ברצף. זה כבר חלק ממך.' :
+                                  streak >= 7  ? 'שבוע שלם. רוב האנשים כבר ויתרו — אתה עדיין כאן.' :
+                                                 'כל יום שחוזר — הרגל מתחזק.';
                 inner += `<div style="margin:16px 0;background:#0d2245;border:1px solid #5bc8f5;border-radius:12px;padding:16px 24px;">
-                    <div style="font-size:16px;color:#5bc8f5;font-weight:600;">שבוע שלם. 🔥</div>
-                    <div style="font-size:13px;color:#888;margin-top:6px;">רוב האנשים כבר ויתרו — אתה עדיין כאן.</div>
+                    <div style="font-size:16px;color:#5bc8f5;font-weight:600;">${fire} ${streak} ימים ברצף</div>
+                    <div style="font-size:13px;color:#888;margin-top:6px;">${streakMsg}</div>
+                </div>`;
+            }
+
+            if (isCycleEnd) {
+                inner += `<div style="margin:16px 0;background:#0d2245;border:1px solid #5bc8f5;border-radius:12px;padding:16px 24px;">
+                    <div style="font-size:16px;color:#5bc8f5;font-weight:600;">שלב ${cycleNumber} הושלם! 🎯</div>
+                    <div style="font-size:13px;color:#888;margin-top:6px;">המאמן מכין את 5 הימים הבאים...</div>
                 </div>`;
             }
 
@@ -1562,6 +1740,8 @@
                     document.getElementById('finish-message').textContent =
                         `השלמת ${totalMoves} תנועות.\n${currentGoal}\nכל הכבוד.`;
                     showScreen('screen-finish');
+                } else if (isCycleEnd) {
+                    generateNextCycle();
                 } else {
                     loadCurrentDay();
                     buildMapDisplay();
@@ -1569,6 +1749,40 @@
                     showScreen('screen-timepicker');
                 }
             }, 2800);
+        }
+
+        async function generateNextCycle() {
+            showScreen('screen-loading');
+            const loadTitle = document.querySelector('#screen-loading .load-title');
+            const loadSub   = document.querySelector('#screen-loading .load-sub');
+            if (loadTitle) loadTitle.textContent = 'בונה את השלב הבא';
+            if (loadSub)   loadSub.textContent   = `מכין 5 ימים חדשים לשלב ${cycleNumber + 1}...`;
+
+            cycleNumber++;
+            let newPlan = null;
+
+            if (getApiKey()) {
+                const daysCompleted = completedMoves;
+                const prompt = `יעד: ${currentGoal}\nהמשתמש השלים ${daysCompleted} ימים בהצלחה.\nבנה 5 ימים חדשים (ימים ${daysCompleted+1}–${daysCompleted+5}) שמתקדמים ומאתגרים יותר מהשלב הקודם.\nחוקים: כל יום — פעולה ספציפית וישירה, 7 דקות בדיוק. אסור מרכאות כפולות ב-task וב-how.`;
+                const text = await callClaude([{role:'user', content: prompt}], PLAN_SYSTEM, 2000);
+                if (text) {
+                    try {
+                        const parsed = extractJSON(text);
+                        if (Array.isArray(parsed) && parsed.length > 0) newPlan = parsed;
+                    } catch(e) {}
+                }
+            }
+
+            if (!newPlan) {
+                const meta = getTemplateMeta(currentGoal);
+                newPlan = [...meta.plan];
+            }
+
+            fullPlan = newPlan;
+            saveState();
+            loadCurrentDay();
+            buildMapDisplay();
+            showScreen('screen-timepicker');
         }
 
         async function scheduleNotification(unlockTimeMs, timeStr) {
@@ -1621,6 +1835,7 @@
             localStorage.setItem('bderech_unlock_time', unlockTime.toString());
 
             scheduleNotification(unlockTime, timeVal);
+            if (window.OneSignal) requestPushPermission();
 
             // חזור לדף הבית — הנעילה תוצג שם עם ספירה לאחור
             loadCurrentDay();
