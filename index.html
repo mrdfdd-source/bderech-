@@ -1429,7 +1429,6 @@
                     'אחד דבר שתיקח מאתמול קדימה?'
                 ];
                 const reflQ = reflections[completedMoves % reflections.length];
-                const tomorrowTask = dayPlan ? dayPlan.task : '';
                 taskCard.innerHTML =
                     '<div style="display:flex;flex-direction:column;gap:16px;padding:20px 16px;">' +
                     // כותרת נעילה
@@ -1443,11 +1442,6 @@
                         '<div style="font-size:11px;color:#5bc8f5;letter-spacing:1px;margin-bottom:6px;font-weight:600;">💭 רגע לחשוב</div>' +
                         '<div style="font-size:14px;color:#ccc;line-height:1.6;">' + reflQ + '</div>' +
                         '<div style="font-size:11px;color:#444;margin-top:6px;">אתמול: ' + (lastHist.task || '') + '</div>' +
-                    '</div>' : '') +
-                    // הצצה למחר
-                    (tomorrowTask ? '<div style="background:#0a1a30;border:1px solid #1e3a5a;border-radius:12px;padding:14px 16px;">' +
-                        '<div style="font-size:11px;color:#5bc8f5;letter-spacing:1px;margin-bottom:6px;font-weight:600;">👀 מחר</div>' +
-                        '<div style="font-size:14px;color:#e0e0e0;font-weight:600;">' + tomorrowTask + '</div>' +
                     '</div>' : '') +
                     '<div style="font-size:11px;color:#333;text-align:center;">שמור אנרגיה למחר — המשכיות היא הסוד</div>' +
                     '</div>';
