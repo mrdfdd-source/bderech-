@@ -284,16 +284,23 @@
             תאריך: new Date().toLocaleDateString('he-IL')
         };
 
-        // שליחה ל-Formspree — החלף YOUR_FORM_ID אחרי הרשמה ב-formspree.io
-        fetch('https://formspree.io/f/YOUR_FORM_ID', {
+        const btn = document.querySelector('.btn-send');
+        btn.disabled = true;
+        btn.textContent = 'שולח...';
+
+        const formData = new FormData();
+        for (const [k, v] of Object.entries(data)) formData.append(k, v);
+        formData.append('_subject', 'משוב בטא — בדרך 📩');
+        formData.append('_template', 'table');
+        formData.append('_captcha', 'false');
+
+        fetch('https://formsubmit.co/mrdfdd@gmail.com', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-            body: JSON.stringify(data)
-        }).then(r => {
+            body: formData
+        }).then(() => {
             document.getElementById('form-section').style.display = 'none';
             document.getElementById('thanks').style.display = 'block';
         }).catch(() => {
-            // גם אם נכשל — תודה (fallback)
             document.getElementById('form-section').style.display = 'none';
             document.getElementById('thanks').style.display = 'block';
         });
