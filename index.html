@@ -1926,12 +1926,20 @@
             addCoachMessage('user', msg);
 
             const lastCompleted = completedHistory[completedHistory.length - 1] || {};
+            const todayCycleIdx = fullPlan.length > 0 ? (currentDay - 1) % fullPlan.length : -1;
+            const tomorrowCycleIdx = fullPlan.length > 0 ? currentDay % fullPlan.length : -1;
+            const todayPlan = fullPlan[todayCycleIdx] || {};
+            const tomorrowPlan = fullPlan[tomorrowCycleIdx] || {};
             const user = {
                 name: localStorage.getItem('bderech_name') || '',
                 dayNumber: currentDay,
                 yesterdayAction: lastCompleted.task || '',
                 yesterdayMood: lastCompleted.mood || '',
-                weeklyGoal: currentGoal || ''
+                weeklyGoal: currentGoal || '',
+                todayTask: todayPlan.task || '',
+                todayHow: todayPlan.how || '',
+                tomorrowTask: tomorrowPlan.task || '',
+                tomorrowHow: tomorrowPlan.how || ''
             };
 
             const thinkDiv = document.createElement('div');
