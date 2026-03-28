@@ -87,8 +87,8 @@ async function askCoach(user, userMessage, history = []) {
                 'anthropic-dangerous-direct-browser-access': 'true'
             },
             body: JSON.stringify({
-                model: 'claude-haiku-4-5-20251001',
-                max_tokens: 150,
+                model: 'claude-sonnet-4-6',
+                max_tokens: 100,
                 system: buildCoachSystem(user),
                 messages
             })
