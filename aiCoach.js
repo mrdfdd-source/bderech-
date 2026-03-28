@@ -47,6 +47,27 @@ ${todayLine}
 טקסט פשוט בלבד.`;
 }
 
+function filterCoachReply(text) {
+    // אם התגובה מכילה פעולה — מחליפים בתגובה אנושית נייטרלית
+    const actionPatterns = [
+        /\bעכשיו\s+(תשלח|תכתוב|תעשה|תנסה|צור|שלח|כתוב|פנה|התקשר|בדוק|תבדוק)/,
+        /\bבוא[ו]?\s+נ/,
+        /\bתשלח\b/,
+        /\bתכתוב\b/,
+        /\bתנסה\b/,
+        /\bתעשה\b/,
+        /\bשלח\s+(הודעה|מייל|וואטסאפ)/,
+        /\bצור\s+קשר/,
+        /\bהצעד\s+הבא/,
+        /\bהדבר\s+הבא/,
+    ];
+    const hasAction = actionPatterns.some(p => p.test(text));
+    if (hasAction) {
+        return 'מובן. זה לא תמיד קל.';
+    }
+    return text;
+}
+
 async function askCoach(user, userMessage, history = []) {
     const key = (typeof getApiKey === 'function') ? getApiKey() : localStorage.getItem('bderech_key');
     if (!key) return null;
@@ -82,7 +103,8 @@ async function askCoach(user, userMessage, history = []) {
         }
 
         const d = await res.json();
-        return d.content[0].text;
+        const reply = d.content[0].text;
+        return filterCoachReply(reply);
     } catch (e) {
         console.error('Coach fetch error:', e);
         return null;
