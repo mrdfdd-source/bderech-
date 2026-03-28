@@ -665,6 +665,7 @@
         
         .screen-copyright { text-align: center; font-size: 10px; color: #3a5575; margin-top: auto; padding-top: 14px; padding-bottom: 4px; flex-shrink: 0; line-height: 1.5; }
     </style>
+    <script src="./aiCoach.js"></script>
 </head>
 <body>
     <div class="app">
@@ -1728,15 +1729,15 @@
             if (!msg) return;
             input.value = '';
             addCoachMessage('user', msg);
-            coachHistory.push({role: 'user', content: msg});
 
-            const dayPlan = fullPlan[currentDay - 1] || {};
-            const context = `יעד: ${currentGoal}. תנועת היום (יום ${currentDay}): ${dayPlan.task || ''} — ${dayPlan.how || ''}`;
-            const system = `אתה מאמן אישי חם ומעודד. ${context}.
-הסגנון שלך: קצר, אנושי, שמח — כמו מישהו שבאמת שמח על ההצלחות של המשתמש. עברית יומיומית, לא רשמית. מקסימום 2-3 משפטים.
-תמיד תעודד — כל דבר שהוא עשה הוא טוב. תסיים עם משהו שמדרבן אותו להשלים את התנועה היומית.
-אם שואלים על מחר או ימים הבאים — רק: "לא מגלה, זה הסוד של השיטה."
-ללא emojis, ללא markdown, ללא כותרות. טקסט פשוט בלבד.`;
+            const lastCompleted = completedHistory[completedHistory.length - 1] || {};
+            const user = {
+                name: localStorage.getItem('bderech_name') || '',
+                dayNumber: currentDay,
+                yesterdayAction: lastCompleted.task || '',
+                yesterdayMood: lastCompleted.mood || '',
+                weeklyGoal: currentGoal || ''
+            };
 
             const thinkDiv = document.createElement('div');
             thinkDiv.className = 'thinking';
@@ -1744,11 +1745,12 @@
             thinkDiv.innerHTML = '<span></span><span></span><span></span>';
             document.getElementById('coach-messages').appendChild(thinkDiv);
 
-            const text = await callClaude(coachHistory, system, 120);
+            const text = await askCoach(user, msg, coachHistory);
             const t = document.getElementById('coach-thinking');
             if (t) t.remove();
 
             if (text) {
+                coachHistory.push({role: 'user', content: msg});
                 coachHistory.push({role: 'assistant', content: text});
                 addCoachMessage('ai', text);
             }
