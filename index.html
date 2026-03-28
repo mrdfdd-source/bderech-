@@ -1421,29 +1421,15 @@
             if (isLocked()) {
                 if (startBtn) { startBtn.style.display = 'none'; }
                 if (taskCard) {
-                    const lastHist = completedHistory[completedHistory.length - 1];
-                const reflections = [
-                    'מה הרגשת אחרי אתמול?',
-                    'מה הלך טוב? מה היה קשה?',
-                    'מה גילית על עצמך אתמול?',
-                    'אחד דבר שתיקח מאתמול קדימה?'
-                ];
-                const reflQ = reflections[completedMoves % reflections.length];
                 taskCard.innerHTML =
-                    '<div style="display:flex;flex-direction:column;gap:16px;padding:20px 16px;">' +
-                    // כותרת נעילה
-                    '<div style="text-align:center;">' +
-                        '<div style="font-size:28px;margin-bottom:6px">🔒</div>' +
+                    '<div style="display:flex;flex-direction:column;gap:16px;padding:28px 16px;text-align:center;">' +
+                        '<div style="font-size:28px;margin-bottom:4px">🔒</div>' +
                         '<div style="font-size:16px;color:#e0e0e0;font-weight:700;">יום ' + currentDay + ' נפתח ב־' + formatUnlockTime(getUnlockTime()) + '</div>' +
-                        '<div id="countdown-display" style="font-size:26px;color:#5bc8f5;font-weight:300;font-variant-numeric:tabular-nums;letter-spacing:2px;margin-top:4px;">--:--:--</div>' +
-                    '</div>' +
-                    // שאלת רפלקציה
-                    (lastHist ? '<div style="background:#0d2040;border-radius:12px;padding:14px 16px;">' +
-                        '<div style="font-size:11px;color:#5bc8f5;letter-spacing:1px;margin-bottom:6px;font-weight:600;">💭 רגע לחשוב</div>' +
-                        '<div style="font-size:14px;color:#ccc;line-height:1.6;">' + reflQ + '</div>' +
-                        '<div style="font-size:11px;color:#444;margin-top:6px;">אתמול: ' + (lastHist.task || '') + '</div>' +
-                    '</div>' : '') +
-                    '<div style="font-size:11px;color:#333;text-align:center;">שמור אנרגיה למחר — המשכיות היא הסוד</div>' +
+                        '<div id="countdown-display" style="font-size:26px;color:#5bc8f5;font-weight:300;font-variant-numeric:tabular-nums;letter-spacing:2px;">--:--:--</div>' +
+                        '<div style="font-size:15px;color:#aaa;line-height:1.7;margin-top:8px;">' +
+                            'כל הכבוד — <b style="color:#e0e0e0;">' + completedMoves + ' ימים</b> של התמדה בדרך.<br>' +
+                            '<span style="color:#5bc8f5;">מחר — עוד צעד אחד.</span>' +
+                        '</div>' +
                     '</div>';
                     if (window._countdownInterval) clearInterval(window._countdownInterval);
                     window._countdownInterval = setInterval(() => {
