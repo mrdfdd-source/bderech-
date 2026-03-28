@@ -1944,9 +1944,9 @@
 
             // תשובה קבועה לשאלות על מחר
             if (/מחר|הבא|מה קורה|מה יהיה/.test(msg)) {
-                addCoachMessage('ai', 'זה היה אחלה. לא מגלה — זה הסוד של התוכנית.');
+                addCoachMessage('ai', 'לא מגלה — זה הסוד של התוכנית 😊');
                 coachHistory.push({role: 'user', content: msg});
-                coachHistory.push({role: 'assistant', content: 'זה היה אחלה. לא מגלה — זה הסוד של התוכנית.'});
+                coachHistory.push({role: 'assistant', content: 'לא מגלה — זה הסוד של התוכנית 😊'});
                 return;
             }
 
