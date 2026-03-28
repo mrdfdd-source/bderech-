@@ -3,9 +3,6 @@
 const COACH_API_URL = 'https://api.anthropic.com/v1/messages';
 
 function buildCoachSystem(user) {
-    const tomorrowLine = user.tomorrowTask
-        ? `- מה יש מחר (יום ${(user.dayNumber || 1) + 1}): ${user.tomorrowTask}${user.tomorrowHow ? ' — ' + user.tomorrowHow : ''}`
-        : '';
     const todayLine = user.todayTask
         ? `- מה יש היום (יום ${user.dayNumber || 1}): ${user.todayTask}${user.todayHow ? ' — ' + user.todayHow : ''}`
         : '';
@@ -17,7 +14,7 @@ function buildCoachSystem(user) {
 
 חוקים מוחלטים:
 - תגובה: 1-2 משפטים בלבד. לא יותר
-- אם שאלו "מה יש מחר" / "מה קורה מחר" — ענה בדיוק עם המשימה שמחר (ראה נתוני המשתמש)
+- אם שאלו "מה יש מחר" / "מה קורה מחר" — אסור לגלות. תגיד שזה הסוד של התוכנית, רק לעשות את היום הזה
 - אם שאלו "מה יש היום" / "מה המשימה" — ענה בדיוק עם המשימה של היום
 - לעולם אל תגיד "תתכנן", "תחשוב", "תחליט" — רק פעולה
 - אם המשתמש מדבר על העבר — קשר אותו להווה
@@ -39,7 +36,6 @@ function buildCoachSystem(user) {
 - איך הרגיש אתמול (1-10): ${user.yesterdayMood || 'לא ידוע'}
 - המטרה שלו: ${user.weeklyGoal || 'לא ידוע'}
 ${todayLine}
-${tomorrowLine}
 
 טקסט פשוט בלבד.`;
 }
