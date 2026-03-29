@@ -57,11 +57,7 @@ self.addEventListener('message', event => {
             return;
         }
 
-        if (self._notifTimeout) clearTimeout(self._notifTimeout);
-
-        self._notifTimeout = setTimeout(() => {
-            fireNotification();
-        }, delay);
+        saveNotifTime(unlockTime);
     }
 });
 
