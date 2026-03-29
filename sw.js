@@ -23,6 +23,7 @@ self.addEventListener('activate', event => {
 
 // ===== Fetch: network-first לדף הראשי, cache-first לשאר =====
 self.addEventListener('fetch', event => {
+    checkAndNotify();
     const url = new URL(event.request.url);
     const isPage = url.pathname.endsWith('/') || url.pathname.endsWith('index.html');
 
