@@ -71,28 +71,53 @@ self.addEventListener('periodicsync', event => {
 
 async function checkAndNotify() {
     try {
-        const time = await getNotifTime();
-        if (time && Date.now() >= time) {
+        const now = new Date();
+        const hours = now.getHours();
+        const minutes = now.getMinutes();
+
+        const eveningTime = await getNotifTime();
+        if (eveningTime && Date.now() >= eveningTime) {
             await clearNotifTime();
-            await fireNotification();
+            await fireEveningNotification();
         }
-    } catch(e) { /* SW fallback */ }
+
+        const lastMorning = await getMorningNotifDate();
+        const todayStr = now.toDateString();
+        if (hours === 9 && minutes < 10 && lastMorning !== todayStr) {
+            await saveMorningNotifDate(todayStr);
+            await fireMorningNotification();
+        }
+    } catch(e) {}
 }
 
-function fireNotification() {
+function fireEveningNotification() {
     return self.registration.showNotification('בדרך — זמן לתנועה היומית! 🎯', {
         body: 'ה-7 דקות שלך מחכות. בוא נמשיך את הדרך.',
-        icon: './icon.svg',
-        badge: './icon.svg',
-        dir: 'rtl',
-        lang: 'he',
-        vibrate: [200, 100, 200],
-        tag: 'bderech-daily',
-        renotify: true,
-        actions: [
-            { action: 'open', title: 'פתח עכשיו ←' },
-            { action: 'snooze', title: 'עוד שעה' }
-        ]
+        icon: './icon.svg', badge: './icon.svg',
+        dir: 'rtl', lang: 'he', vibrate: [200, 100, 200],
+        tag: 'bderech-evening', renotify: true,
+        actions: [{ action: 'open', title: 'פתח עכשיו ←' }, { action: 'snooze', title: 'עוד שעה' }]
+    });
+}
+
+function fireMorningNotification() {
+    const dayNumber = parseInt(self._dayNumber || 1);
+    const messages = [
+        'כל מסע מתחיל בצעד אחד. אתה כבר עשית אותו. 💙',
+        'להתמיד זה המשחק. אתה בפנים. 💙',
+        'שלושה ימים ברצף. זה לא מקרה. 💙',
+        'אמצע הדרך הוא הכי קשה. וגם הכי חשוב. 💙',
+        'הגוף משתנה לפני שהמוח מאמין לו. 💙',
+        'עקביות קטנה עושה שינויים גדולים. 💙',
+        'שבוע שלם. זה הצלחה אמיתית. 💙',
+    ];
+    const msg = messages[(dayNumber - 1) % messages.length];
+    return self.registration.showNotification(`יום ${dayNumber} בדרך ☀️`, {
+        body: msg,
+        icon: './icon.svg', badge: './icon.svg',
+        dir: 'rtl', lang: 'he', vibrate: [200, 100, 200],
+        tag: 'bderech-morning', renotify: false,
+        actions: [{ action: 'open', title: 'בוא נתחיל ←' }]
     });
 }
 
@@ -149,6 +174,25 @@ async function clearNotifTime() {
     return new Promise((res, rej) => {
         const tx = db.transaction('data', 'readwrite');
         tx.objectStore('data').delete('notifTime');
+        tx.oncomplete = res; tx.onerror = rej;
+    });
+}
+
+async function getMorningNotifDate() {
+    const db = await openDB();
+    return new Promise((res, rej) => {
+        const tx = db.transaction('data', 'readonly');
+        const req = tx.objectStore('data').get('morningDate');
+        req.onsuccess = () => res(req.result);
+        req.onerror = rej;
+    });
+}
+
+async function saveMorningNotifDate(dateStr) {
+    const db = await openDB();
+    return new Promise((res, rej) => {
+        const tx = db.transaction('data', 'readwrite');
+        tx.objectStore('data').put(dateStr, 'morningDate');
         tx.oncomplete = res; tx.onerror = rej;
     });
 }
