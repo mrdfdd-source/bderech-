@@ -697,19 +697,20 @@
         }
 
         async function enableNotifications() {
-            if (!window.OneSignal) return;
-            await OneSignal.Notifications.requestPermission();
+            try {
+                if (window.OneSignal && window.OneSignal.Notifications) {
+                    await OneSignal.Notifications.requestPermission();
+                } else {
+                    await Notification.requestPermission();
+                }
+            } catch(e) {}
             localStorage.setItem('bderech_notif_ok', '1');
-            const banner = document.getElementById('notif-banner');
-            if (banner) banner.style.display = 'none';
+            // רענן את כרטיס הנעילה להסרת האייקון
+            loadCurrentDay();
         }
     </script>
 </head>
 <body>
-    <!-- באנר התראות -->
-    <button id="notif-banner" onclick="enableNotifications()" style="position:fixed;bottom:90px;left:50%;transform:translateX(-50%);z-index:8000;background:linear-gradient(135deg,#1e4a8a,#0d2245);border:1.5px solid #5bc8f5;color:#5bc8f5;font-size:14px;padding:12px 24px;border-radius:24px;cursor:pointer;box-shadow:0 4px 20px rgba(91,200,245,0.3);white-space:nowrap;">
-        🔔 הפעל התראות בוקר
-    </button>
     <div class="app">
 
         <!-- מסך 0: נחיתה -->
@@ -1440,7 +1441,10 @@
                 if (taskCard) {
                 taskCard.innerHTML =
                     '<div style="display:flex;flex-direction:column;gap:16px;padding:28px 16px;text-align:center;">' +
-                        '<div style="font-size:28px;margin-bottom:4px">🔒</div>' +
+                        '<div style="display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:4px;">' +
+                        '<div style="font-size:28px">🔒</div>' +
+                        (!localStorage.getItem('bderech_notif_ok') ? '<button onclick="enableNotifications()" style="background:none;border:1.5px solid #5bc8f5;color:#5bc8f5;border-radius:50%;width:34px;height:34px;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;">🔔</button>' : '') +
+                    '</div>' +
                         '<div style="font-size:16px;color:#e0e0e0;font-weight:700;">יום ' + currentDay + ' נפתח ב־' + formatUnlockTime(getUnlockTime()) + '</div>' +
                         '<div id="countdown-display" style="font-size:26px;color:#5bc8f5;font-weight:300;font-variant-numeric:tabular-nums;letter-spacing:2px;">--:--:--</div>' +
                         '<div style="font-size:15px;color:#aaa;line-height:1.7;margin-top:8px;">' +
