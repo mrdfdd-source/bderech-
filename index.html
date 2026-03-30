@@ -685,10 +685,10 @@
                     }
                 }
             });
-            // הצג כפתור התראות אם עדיין לא נרשם
-            if (!OneSignal.User.PushSubscription.optedIn && !localStorage.getItem('bderech_notif_ok')) {
+            // הסתר כפתור אם OneSignal מאשר שנרשם
+            if (OneSignal.User.PushSubscription.optedIn) {
                 const btn = document.getElementById('notif-btn');
-                if (btn) btn.style.display = 'flex';
+                if (btn) btn.style.display = 'none';
             }
         });
 
@@ -697,16 +697,19 @@
         }
 
         async function enableNotifications() {
+            let granted = false;
             try {
                 if (window.OneSignal && window.OneSignal.Notifications) {
-                    await OneSignal.Notifications.requestPermission();
+                    granted = await OneSignal.Notifications.requestPermission();
                 } else {
-                    await Notification.requestPermission();
+                    const perm = await Notification.requestPermission();
+                    granted = perm === 'granted';
                 }
             } catch(e) {}
-            localStorage.setItem('bderech_notif_ok', '1');
-            const btn = document.getElementById('notif-btn');
-            if (btn) btn.style.display = 'none';
+            if (granted) {
+                const btn = document.getElementById('notif-btn');
+                if (btn) btn.style.display = 'none';
+            }
         }
     </script>
 </head>
@@ -2049,8 +2052,8 @@
                     }
                 });
             });
-            // הסתר כפתור התראות מיד אם כבר אישר
-            if (localStorage.getItem('bderech_notif_ok') || Notification.permission === 'granted') {
+            // הסתר כפתור התראות אם כבר אישר
+            if (Notification.permission === 'granted') {
                 const btn = document.getElementById('notif-btn');
                 if (btn) btn.style.display = 'none';
             }
