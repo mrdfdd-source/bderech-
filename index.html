@@ -706,6 +706,10 @@
     </script>
 </head>
 <body>
+    <!-- באנר התראות — מחוץ לכל המסכים -->
+    <div id="notif-banner" onclick="enableNotifications()" style="display:none;position:fixed;top:0;left:0;right:0;z-index:9999;background:#1e4a8a;color:#5bc8f5;text-align:center;padding:12px;font-size:14px;cursor:pointer;border-bottom:1px solid #5bc8f5;">
+        🔔 הפעל התראת בוקר יומית — לחץ כאן
+    </div>
     <div class="app">
 
         <!-- מסך 0: נחיתה -->
@@ -759,10 +763,6 @@
             <div class="goal-name" id="goal-name"></div>
             <div id="progress-narrative" style="font-size:12px;color:#444;margin-top:-8px;margin-bottom:4px;text-align:center;"></div>
             <div id="streak-display" style="display:none;text-align:center;margin-bottom:6px;"></div>
-
-            <div id="notif-banner" style="display:none;background:rgba(91,200,245,0.1);border:1px solid rgba(91,200,245,0.3);border-radius:10px;padding:10px 14px;margin-bottom:12px;text-align:center;cursor:pointer;" onclick="enableNotifications()">
-                🔔 הפעל התראת בוקר יומית
-            </div>
 
             <div class="map-lbl" id="map-label">המפה שלך</div>
             <div class="map-grid" id="map-grid"></div>
@@ -2037,6 +2037,14 @@
     <!-- ===== רישום Service Worker ===== -->
     <script>
         if ('serviceWorker' in navigator) {
+            // נקה SWים ישנים
+            navigator.serviceWorker.getRegistrations().then(regs => {
+                regs.forEach(reg => {
+                    if (reg.active && reg.active.scriptURL.includes('sw.js')) {
+                        reg.unregister();
+                    }
+                });
+            });
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('./OneSignalSDKWorker.js', { scope: '/bderech-/' })
                     .then(reg => {
