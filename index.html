@@ -672,12 +672,14 @@
         window.OneSignalDeferred = window.OneSignalDeferred || [];
         OneSignalDeferred.push(async function(OneSignal) {
             await OneSignal.init({
-                appId: "ONESIGNAL_APP_ID_HERE",
+                appId: "e6205980-776e-4c50-9dcc-86bfe654b3b7",
+                serviceWorkerPath: "/bderech-/OneSignalSDKWorker.js",
+                serviceWorkerParam: { scope: "/bderech-/" },
                 notifyButton: { enable: false },
                 promptOptions: {
                     slidedown: {
                         enabled: true,
-                        actionMessage: "בדרך רוצה לשלוח לך תזכורת יומית 💙",
+                        actionMessage: "בדרך רוצה לשלוח לך תזכורת בוקר יומית 💙",
                         acceptButtonText: "כן, תזכיר לי",
                         cancelButtonText: "אחר כך"
                     }
