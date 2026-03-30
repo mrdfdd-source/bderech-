@@ -685,6 +685,11 @@
                     }
                 }
             });
+            // הצג popup אוטומטית אם עדיין לא נרשם
+            const isSubscribed = await OneSignal.User.PushSubscription.optedIn;
+            if (!isSubscribed) {
+                setTimeout(() => OneSignal.Slidedown.promptPush(), 3000);
+            }
         });
 
         function requestPushPermission() {
