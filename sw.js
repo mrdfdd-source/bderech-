@@ -1,12 +1,19 @@
 // ===== Service Worker - בדרך =====
-const CACHE_NAME = 'bderech-v8';
+// גרסה זו מסירה את עצמה ומעבירת שליטה ל-OneSignalSDKWorker.js
+const CACHE_NAME = 'bderech-v9';
 const URLS_TO_CACHE = ['./', './index.html', './aiCoach.js', './manifest.json', './icon-192.png', './icon-512.png'];
 
 // ===== התקנה: שמור קבצים ב-cache =====
 self.addEventListener('install', event => {
     self.skipWaiting();
+});
+
+self.addEventListener('activate', event => {
     event.waitUntil(
-        caches.open(CACHE_NAME).then(cache => cache.addAll(URLS_TO_CACHE))
+        caches.keys().then(keys => Promise.all(keys.map(k => caches.delete(k))))
+            .then(() => self.registration.unregister())
+            .then(() => self.clients.matchAll({ type: 'window' }))
+            .then(clients => clients.forEach(c => c.navigate(c.url)))
     );
 });
 
