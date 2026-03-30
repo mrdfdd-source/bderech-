@@ -679,19 +679,9 @@
             });
         });
 
-        function requestPushPermission() { enableNotifications(); }
-
-        async function enableNotifications() {
-            try {
-                if (window.OneSignal && window.OneSignal.Notifications) {
-                    await OneSignal.Notifications.requestPermission();
-                } else {
-                    await Notification.requestPermission();
-                }
-            } catch(e) {}
-            // הסתר רק לפי מצב אמיתי של הדפדפן
-            if (Notification.permission === 'granted') {
-                document.getElementById('notif-btn').style.display = 'none';
+        function requestPushPermission() {
+            if (window.OneSignal && window.OneSignal.Notifications) {
+                OneSignal.Notifications.requestPermission();
             }
         }
     </script>
@@ -770,7 +760,6 @@
 
             <button class="btn-main" id="start-btn" onclick="startTimer()">התחל את התנועה ←</button>
             <button class="btn-sec" onclick="changeGoal()" style="margin-top:8px;font-size:13px;opacity:0.6;">החלף יעד</button>
-            <button id="notif-btn" onclick="enableNotifications()" style="margin-top:6px;background:none;border:1px solid #5bc8f5;color:#5bc8f5;border-radius:20px;padding:6px 16px;font-size:13px;cursor:pointer;opacity:0.7;">🔔 הפעל התראות בוקר</button>
         </div>
 
         <!-- מסך 5: טיימר -->
