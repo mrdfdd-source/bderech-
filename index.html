@@ -685,17 +685,23 @@
                     }
                 }
             });
-            // הצג popup אוטומטית אם עדיין לא נרשם
-            const isSubscribed = await OneSignal.User.PushSubscription.optedIn;
+            // הצג באנר אם עדיין לא נרשם
+            const isSubscribed = OneSignal.User.PushSubscription.optedIn;
             if (!isSubscribed) {
-                setTimeout(() => OneSignal.Slidedown.promptPush(), 3000);
+                const banner = document.getElementById('notif-banner');
+                if (banner) banner.style.display = 'block';
             }
         });
 
         function requestPushPermission() {
-            if (window.OneSignal) {
-                OneSignal.Slidedown.promptPush();
-            }
+            enableNotifications();
+        }
+
+        async function enableNotifications() {
+            if (!window.OneSignal) return;
+            await OneSignal.Notifications.requestPermission();
+            const banner = document.getElementById('notif-banner');
+            if (banner) banner.style.display = 'none';
         }
     </script>
 </head>
@@ -753,6 +759,10 @@
             <div class="goal-name" id="goal-name"></div>
             <div id="progress-narrative" style="font-size:12px;color:#444;margin-top:-8px;margin-bottom:4px;text-align:center;"></div>
             <div id="streak-display" style="display:none;text-align:center;margin-bottom:6px;"></div>
+
+            <div id="notif-banner" style="display:none;background:rgba(91,200,245,0.1);border:1px solid rgba(91,200,245,0.3);border-radius:10px;padding:10px 14px;margin-bottom:12px;text-align:center;cursor:pointer;" onclick="enableNotifications()">
+                🔔 הפעל התראת בוקר יומית
+            </div>
 
             <div class="map-lbl" id="map-label">המפה שלך</div>
             <div class="map-grid" id="map-grid"></div>
