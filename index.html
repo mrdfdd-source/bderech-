@@ -675,40 +675,23 @@
                 appId: "e6205980-776e-4c50-9dcc-86bfe654b3b7",
                 serviceWorkerPath: "/bderech-/OneSignalSDKWorker.js",
                 serviceWorkerParam: { scope: "/bderech-/" },
-                notifyButton: { enable: false },
-                promptOptions: {
-                    slidedown: {
-                        enabled: true,
-                        actionMessage: "בדרך רוצה לשלוח לך תזכורת בוקר יומית 💙",
-                        acceptButtonText: "כן, תזכיר לי",
-                        cancelButtonText: "אחר כך"
-                    }
-                }
+                notifyButton: { enable: false }
             });
-            // הסתר כפתור אם OneSignal מאשר שנרשם
-            if (OneSignal.User.PushSubscription.optedIn) {
-                const btn = document.getElementById('notif-btn');
-                if (btn) btn.style.display = 'none';
-            }
         });
 
-        function requestPushPermission() {
-            enableNotifications();
-        }
+        function requestPushPermission() { enableNotifications(); }
 
         async function enableNotifications() {
-            let granted = false;
             try {
                 if (window.OneSignal && window.OneSignal.Notifications) {
-                    granted = await OneSignal.Notifications.requestPermission();
+                    await OneSignal.Notifications.requestPermission();
                 } else {
-                    const perm = await Notification.requestPermission();
-                    granted = perm === 'granted';
+                    await Notification.requestPermission();
                 }
             } catch(e) {}
-            if (granted) {
-                const btn = document.getElementById('notif-btn');
-                if (btn) btn.style.display = 'none';
+            // הסתר רק לפי מצב אמיתי של הדפדפן
+            if (Notification.permission === 'granted') {
+                document.getElementById('notif-btn').style.display = 'none';
             }
         }
     </script>
@@ -2052,12 +2035,6 @@
                     }
                 });
             });
-            // הסתר כפתור התראות אם כבר אישר
-            if (Notification.permission === 'granted') {
-                const btn = document.getElementById('notif-btn');
-                if (btn) btn.style.display = 'none';
-            }
-
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('./OneSignalSDKWorker.js', { scope: '/bderech-/' })
                     .then(reg => {
