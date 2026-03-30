@@ -1,0 +1,25 @@
+name: Morning Notification
+
+on:
+  schedule:
+    - cron: '0 6 * * *'  # 9:00 AM Israel time (UTC+3, summer)
+  workflow_dispatch:      # אפשר להפעיל ידנית לבדיקה
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send morning push notification
+        run: |
+          curl -s -X POST "https://api.onesignal.com/notifications" \
+            -H "Authorization: Key ${{ secrets.ONESIGNAL_REST_KEY }}" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "app_id": "e6205980-776e-4c50-9dcc-86bfe654b3b7",
+              "target_channel": "push",
+              "included_segments": ["Total Subscriptions"],
+              "headings": {"he": "בדרך ☀️", "en": "בדרך ☀️"},
+              "contents": {"he": "הצעד היומי שלך מחכה. בוא נמשיך את הדרך.", "en": "הצעד היומי שלך מחכה. בוא נמשיך את הדרך."},
+              "ttl": 3600,
+              "isAnyWeb": true
+            }'
