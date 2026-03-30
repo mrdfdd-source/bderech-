@@ -685,11 +685,10 @@
                     }
                 }
             });
-            // הצג באנר אם עדיין לא נרשם
-            const isSubscribed = OneSignal.User.PushSubscription.optedIn;
-            if (!isSubscribed) {
+            // הסתר באנר רק אם כבר נרשם
+            if (OneSignal.User.PushSubscription.optedIn || localStorage.getItem('bderech_notif_ok')) {
                 const banner = document.getElementById('notif-banner');
-                if (banner) banner.style.display = 'block';
+                if (banner) banner.style.display = 'none';
             }
         });
 
@@ -700,6 +699,7 @@
         async function enableNotifications() {
             if (!window.OneSignal) return;
             await OneSignal.Notifications.requestPermission();
+            localStorage.setItem('bderech_notif_ok', '1');
             const banner = document.getElementById('notif-banner');
             if (banner) banner.style.display = 'none';
         }
@@ -707,7 +707,7 @@
 </head>
 <body>
     <!-- באנר התראות — מחוץ לכל המסכים -->
-    <div id="notif-banner" onclick="enableNotifications()" style="display:none;position:fixed;top:0;left:0;right:0;z-index:9999;background:#1e4a8a;color:#5bc8f5;text-align:center;padding:12px;font-size:14px;cursor:pointer;border-bottom:1px solid #5bc8f5;">
+    <div id="notif-banner" onclick="enableNotifications()" style="position:fixed;top:0;left:0;right:0;z-index:9999;background:#1e4a8a;color:#5bc8f5;text-align:center;padding:12px;font-size:14px;cursor:pointer;border-bottom:1px solid #5bc8f5;">
         🔔 הפעל התראת בוקר יומית — לחץ כאן
     </div>
     <div class="app">
