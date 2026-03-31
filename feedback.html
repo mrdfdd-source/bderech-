@@ -146,7 +146,7 @@
     <div id="form-section">
         <div class="lbl">בדרך — בטא</div>
         <h1>דקה <b>אחת</b> של משוב</h1>
-        <p class="sub">5 שאלות קצרות. אין תשובות נכונות. הכל עוזר.</p>
+        <p class="sub">6 שאלות קצרות. אין תשובות נכונות. הכל עוזר.</p>
 
         <!-- שאלה 1 -->
         <div class="q-block">
@@ -195,9 +195,16 @@
             <textarea id="q4" placeholder="כתוב בחופשיות — כל פרט עוזר..."></textarea>
         </div>
 
-        <!-- שאלה 5 -->
+        <!-- שאלה 5 — חדש -->
         <div class="q-block">
-            <div class="q-num">שאלה 5 מתוך 5</div>
+            <div class="q-num">שאלה 5 מתוך 6</div>
+            <div class="q-title">מה היית מוסיף או מה חסר לך באפליקציה?</div>
+            <textarea id="q5b" placeholder="רעיון, פיצ'ר, תחושה — כל מה שעלה לך..."></textarea>
+        </div>
+
+        <!-- שאלה 6 -->
+        <div class="q-block">
+            <div class="q-num">שאלה 6 מתוך 6</div>
             <div class="q-title">האם תמליץ על בדרך לחבר שרוצה לשנות הרגל?</div>
             <div class="options" id="q5">
                 <button class="opt" data-val="בהחלט">בהחלט כן</button>
@@ -279,6 +286,7 @@
             חזרתיום2: getOpt('q2'),
             דירוג: selectedStars,
             הערות: document.getElementById('q4').value.trim(),
+            מהחסר: document.getElementById('q5b').value.trim(),
             ממליץ: getOpt('q5'),
             אימייל: document.getElementById('email').value.trim(),
             תאריך: new Date().toLocaleDateString('he-IL')
