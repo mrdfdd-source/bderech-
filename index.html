@@ -1042,6 +1042,24 @@
                 streak = s.streak || 0;
                 lastCompletedDate = s.lastCompletedDate || '';
                 cycleNumber = s.cycleNumber || 1;
+
+                // שחזור streak מהיסטוריה אם חסר (state ישן)
+                if (streak === 0 && completedHistory.length > 0) {
+                    const dates = completedHistory
+                        .map(h => h.completedAt ? new Date(h.completedAt).toISOString().split('T')[0] : null)
+                        .filter(Boolean);
+                    const unique = [...new Set(dates)].sort();
+                    let count = 1;
+                    for (let i = unique.length - 1; i > 0; i--) {
+                        const d1 = new Date(unique[i]);
+                        const d2 = new Date(unique[i - 1]);
+                        const diff = (d1 - d2) / (1000 * 60 * 60 * 24);
+                        if (diff <= 1.5) count++; else break;
+                    }
+                    streak = count;
+                    if (unique.length > 0) lastCompletedDate = unique[unique.length - 1];
+                }
+
                 return fullPlan.length > 0;
             } catch(e) { return false; }
         }
