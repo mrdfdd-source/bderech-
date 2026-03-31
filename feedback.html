@@ -214,12 +214,6 @@
             <div class="error-msg" id="err5">אנא בחר אפשרות</div>
         </div>
 
-        <!-- אימייל אופציונלי -->
-        <div class="q-block">
-            <div class="q-title" style="margin-bottom:10px;">רוצה שנעדכן אותך כשיש חדש? (אופציונלי)</div>
-            <input type="email" id="email" placeholder="your@email.com" dir="ltr"/>
-        </div>
-
         <button class="btn-send" onclick="submitForm()">שלח משוב ←</button>
     </div>
 
@@ -288,7 +282,6 @@
             הערות: document.getElementById('q4').value.trim(),
             מהחסר: document.getElementById('q5b').value.trim(),
             ממליץ: getOpt('q5'),
-            אימייל: document.getElementById('email').value.trim(),
             תאריך: new Date().toLocaleDateString('he-IL')
         };
 
