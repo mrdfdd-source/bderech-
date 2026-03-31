@@ -1039,12 +1039,11 @@
                 shapeName = s.shapeName || '';
                 completedHistory = s.completedHistory || [];
                 hardDays = s.hardDays || [];
-                streak = s.streak || 0;
                 lastCompletedDate = s.lastCompletedDate || '';
                 cycleNumber = s.cycleNumber || 1;
 
-                // שחזור streak מהיסטוריה אם חסר (state ישן)
-                if (streak === 0 && completedHistory.length > 0) {
+                // חישוב streak תמיד מההיסטוריה — מקור האמת
+                if (completedHistory.length > 0) {
                     const dates = completedHistory
                         .map(h => h.completedAt ? new Date(h.completedAt).toISOString().split('T')[0] : null)
                         .filter(Boolean);
@@ -1058,6 +1057,8 @@
                     }
                     streak = count;
                     if (unique.length > 0) lastCompletedDate = unique[unique.length - 1];
+                } else {
+                    streak = s.streak || 0;
                 }
 
                 return fullPlan.length > 0;
