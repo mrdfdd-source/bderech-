@@ -1,20 +1,10 @@
 // ===== Service Worker - בדרך =====
-// גרסה זו מסירה את עצמה ומעבירת שליטה ל-OneSignalSDKWorker.js
-const CACHE_NAME = 'bderech-v9';
+const CACHE_NAME = 'bderech-v10';
 const URLS_TO_CACHE = ['./', './index.html', './aiCoach.js', './manifest.json', './icon-192.png', './icon-512.png'];
 
 // ===== התקנה: שמור קבצים ב-cache =====
 self.addEventListener('install', event => {
     self.skipWaiting();
-});
-
-self.addEventListener('activate', event => {
-    event.waitUntil(
-        caches.keys().then(keys => Promise.all(keys.map(k => caches.delete(k))))
-            .then(() => self.registration.unregister())
-            .then(() => self.clients.matchAll({ type: 'window' }))
-            .then(clients => clients.forEach(c => c.navigate(c.url)))
-    );
 });
 
 // ===== הפעלה: נקה cache ישן + הודע לכל הלקוחות לרענן =====
@@ -54,18 +44,35 @@ self.addEventListener('fetch', event => {
 });
 
 // ===== הודעות מהדף הראשי =====
+let _morningTimeout = null;
+
 self.addEventListener('message', event => {
     const { type, unlockTime } = event.data || {};
 
     if (type === 'SCHEDULE_NOTIFICATION' && unlockTime) {
         const delay = unlockTime - Date.now();
-
         if (delay <= 0) {
-            fireNotification();
+            fireEveningNotification();
             return;
         }
-
         saveNotifTime(unlockTime);
+    }
+
+    if (type === 'SCHEDULE_MORNING') {
+        if (_morningTimeout) clearTimeout(_morningTimeout);
+        const now = new Date();
+        const next8am = new Date(now);
+        next8am.setHours(8, 0, 0, 0);
+        if (next8am <= now) next8am.setDate(next8am.getDate() + 1);
+        const delay = next8am - now;
+        _morningTimeout = setTimeout(() => {
+            getMorningNotifDate().then(last => {
+                const todayStr = new Date().toDateString();
+                if (last !== todayStr) {
+                    saveMorningNotifDate(todayStr).then(() => fireMorningNotification());
+                }
+            });
+        }, delay);
     }
 });
 
@@ -90,7 +97,7 @@ async function checkAndNotify() {
 
         const lastMorning = await getMorningNotifDate();
         const todayStr = now.toDateString();
-        if (hours === 9 && minutes < 10 && lastMorning !== todayStr) {
+        if (hours === 8 && minutes < 10 && lastMorning !== todayStr) {
             await saveMorningNotifDate(todayStr);
             await fireMorningNotification();
         }
@@ -119,7 +126,7 @@ function fireMorningNotification() {
         'שבוע שלם. זה הצלחה אמיתית. 💙',
     ];
     const msg = messages[(dayNumber - 1) % messages.length];
-    return self.registration.showNotification(`יום ${dayNumber} בדרך ☀️`, {
+    return self.registration.showNotification('בדרך ☀️ הצעד היומי שלך מחכה', {
         body: msg,
         icon: './icon.svg', badge: './icon.svg',
         dir: 'rtl', lang: 'he', vibrate: [200, 100, 200],

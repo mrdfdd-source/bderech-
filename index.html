@@ -666,25 +666,6 @@
         .screen-copyright { text-align: center; font-size: 10px; color: #3a5575; margin-top: auto; padding-top: 14px; padding-bottom: 4px; flex-shrink: 0; line-height: 1.5; }
     </style>
     <script src="./aiCoach.js"></script>
-    <!-- OneSignal Push Notifications -->
-    <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
-    <script>
-        window.OneSignalDeferred = window.OneSignalDeferred || [];
-        OneSignalDeferred.push(async function(OneSignal) {
-            await OneSignal.init({
-                appId: "e6205980-776e-4c50-9dcc-86bfe654b3b7",
-                serviceWorkerPath: "/bderech-/OneSignalSDKWorker.js",
-                serviceWorkerParam: { scope: "/bderech-/" },
-                notifyButton: { enable: false }
-            });
-        });
-
-        function requestPushPermission() {
-            if (window.OneSignal && window.OneSignal.Notifications) {
-                OneSignal.Notifications.requestPermission();
-            }
-        }
-    </script>
 </head>
 <body>
     <div class="app">
@@ -1809,7 +1790,6 @@
             localStorage.setItem('bderech_unlock_time', unlockTime.toString());
 
             scheduleNotification(unlockTime, timeVal);
-            if (window.OneSignal) requestPushPermission();
 
             // חזור לדף הבית — הנעילה תוצג שם עם ספירה לאחור
             loadCurrentDay();
@@ -2008,28 +1988,46 @@
             } else {
                 showScreen('screen-landing');
             }
+
+            // ===== בקשת הרשאה להתראות =====
+            if ('Notification' in window && Notification.permission === 'default') {
+                setTimeout(() => {
+                    Notification.requestPermission().then(perm => {
+                        if (perm === 'granted' && 'serviceWorker' in navigator) {
+                            navigator.serviceWorker.ready.then(reg => {
+                                if (navigator.serviceWorker.controller) {
+                                    navigator.serviceWorker.controller.postMessage({ type: 'SCHEDULE_MORNING' });
+                                }
+                                // Periodic Background Sync (Chrome Android)
+                                if ('periodicSync' in reg) {
+                                    reg.periodicSync.register('check-bderech-notification', { minInterval: 60 * 60 * 1000 }).catch(() => {});
+                                }
+                            });
+                        }
+                    });
+                }, 2000);
+            }
         });
     </script>
 
     <!-- ===== רישום Service Worker ===== -->
     <script>
         if ('serviceWorker' in navigator) {
-            // נקה SWים ישנים
-            navigator.serviceWorker.getRegistrations().then(regs => {
-                regs.forEach(reg => {
-                    if (reg.active && reg.active.scriptURL.includes('sw.js')) {
-                        reg.unregister();
-                    }
-                });
-            });
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./OneSignalSDKWorker.js', { scope: '/bderech-/' })
+                navigator.serviceWorker.register('./sw.js', { scope: '/bderech-/' })
                     .then(reg => {
                         console.log('SW רשום:', reg.scope);
+                        // שלח הוראת תזמון להתראת בוקר
+                        if (navigator.serviceWorker.controller) {
+                            navigator.serviceWorker.controller.postMessage({ type: 'SCHEDULE_MORNING' });
+                        } else {
+                            navigator.serviceWorker.addEventListener('controllerchange', () => {
+                                navigator.serviceWorker.controller.postMessage({ type: 'SCHEDULE_MORNING' });
+                            });
+                        }
                     })
                     .catch(err => console.log('SW נכשל:', err));
 
-                // עדכון אוטומטי — כשה-SW החדש מופעל, רענן את הדף
                 navigator.serviceWorker.addEventListener('message', event => {
                     if (event.data && event.data.type === 'SW_UPDATED') {
                         window.location.reload();
