@@ -4,7 +4,8 @@ const COACH_API_URL = 'https://api.anthropic.com/v1/messages';
 
 // שכבה 1: זיהוי סוג הודעה
 function detectMessageType(msg) {
-    if (/מחר|מה הבא|מה קורה|מה יהיה/.test(msg)) return 'tomorrow';
+    // רק שאלה ישירה על מחר — לא כשמזכירים מחר בהקשר אחר
+    if (/^מה (יהיה |קורה )?מחר|^מה (הבא|המשימה הבאה|אחרי זה)/.test(msg.trim())) return 'tomorrow';
     if (/מה (אני )?(עושה|צריך|אמור)|לא יודע מה|עזרה|מה המשימה|מה היום|איך עושים/.test(msg)) return 'task';
     return 'emotional';
 }
@@ -12,7 +13,7 @@ function detectMessageType(msg) {
 // שכבה 1: תשובות קבועות לפי סוג
 function getHardcodedReply(type, user) {
     if (type === 'tomorrow') {
-        return 'לא מגלה — זה הסוד של התוכנית 😊';
+        return 'זה יפתיע אותך 😊';
     }
     if (type === 'task') {
         if (user.todayTask) {
@@ -23,10 +24,15 @@ function getHardcodedReply(type, user) {
     return null; // emotional → AI
 }
 
-// שכבה 2: AI רק לרגשות — משפט אחד של שיקוף
-const EMOTIONAL_SYSTEM = `אתה מחזיר בדיוק משפט אחד בעברית. המשפט משקף בחום את מה שהמשתמש אמר. ללא פעולות. ללא עצות. ללא שאלות. משפט אחד בלבד.
-- כשהמשתמש מביע תסכול או חוסר סבלנות — אל תנסה לפתור. תגיד לו שהוא כבר בדרך, שהצעדים שעשה כבר נספרים, ושאתה נפגש איתו מחר לתנועה הבאה. סגור את השיחה בחמימות.
-- אל תסביר מה אתה עושה או לא עושה — פשוט עשה את זה`;
+// שכבה 2: AI לרגשות — נוכחות אמיתית
+const EMOTIONAL_SYSTEM = `אתה מאמן שמקשיב. השב במשפט אחד בעברית שמשקף בחום את מה שהמשתמש אמר.
+
+חוקים:
+- שקף מה שהוא אמר — אל תסגור, אל תנתב, אל תייעץ
+- אם אמר משהו רגשי — היה נוכח עם זה, לא מעבר ממנו
+- לעולם אל תאמר "נפגשים מחר" — זה סוגר רגעים חשובים
+- לעולם אל תזכיר "תוכנית"
+- משפט אחד בלבד`;
 
 async function askCoach(user, userMessage, history = []) {
     const type = detectMessageType(userMessage);
@@ -37,9 +43,10 @@ async function askCoach(user, userMessage, history = []) {
     const key = (typeof getApiKey === 'function') ? getApiKey() : localStorage.getItem('bderech_key');
     if (!key) return null;
 
+    const ctx = `[הקשר: יום ${user.dayNumber} בדרך. יעד: ${user.weeklyGoal}. משימה היום: ${user.todayTask || 'לא ידוע'}.]`;
     const messages = [
-        ...history.slice(-4), // רק 2 סיבובים אחרונים
-        { role: 'user', content: userMessage }
+        ...history.slice(-4),
+        { role: 'user', content: `${ctx}\n${userMessage}` }
     ];
 
     try {
