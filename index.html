@@ -1659,7 +1659,8 @@
         function completeDay() {
             if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
             const currentIndex = allIndices[completedMoves];
-            const dayPlan = fullPlan[currentDay - 1] || {};
+            const cycleIdx = fullPlan.length > 0 ? (currentDay - 1) % fullPlan.length : 0;
+            const dayPlan = fullPlan[cycleIdx] || {};
             if (currentIndex !== undefined) litIndices.push(currentIndex);
             completedHistory.push({
                 day: currentDay,
