@@ -5,7 +5,15 @@
       "Bash(git commit:*)",
       "Bash(git push:*)",
       "WebSearch",
-      "WebFetch(domain:www.affiliate-course.co.il)"
+      "WebFetch(domain:www.affiliate-course.co.il)",
+      "Bash(curl -s \"https://mrdfdd-source.github.io/bderech-/index.html\")",
+      "Bash(curl -s \"https://mrdfdd-source.github.io/bderech-/sw.js\")",
+      "Bash(curl -s -H \"Cache-Control: no-cache\" -H \"Pragma: no-cache\" \"https://mrdfdd-source.github.io/bderech-/index.html\")",
+      "Bash(curl -s -H \"Cache-Control: no-cache\" \"https://mrdfdd-source.github.io/bderech-/index.html\")",
+      "Bash(curl -s \"https://mrdfdd-source.github.io/bderech-/index.html?v=1\")",
+      "Bash(curl -s \"https://mrdfdd-source.github.io/bderech-/index.html?v=2\")",
+      "Bash(curl -s \"https://mrdfdd-source.github.io/bderech-/index.html?v=3\")",
+      "Bash(curl -s \"https://mrdfdd-source.github.io/bderech-/index.html?v=4\")"
     ]
   }
 }

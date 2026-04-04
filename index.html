@@ -871,7 +871,7 @@
             showScreen('screen-goal');
         }
 
-        async function callClaude(messages, system, maxTokens = 500) {
+        async function callClaude(messages, system, maxTokens = 500, model = 'claude-haiku-4-5-20251001') {
             const key = getApiKey();
             if (!key) { showScreen('screen-apikey'); return null; }
             try {
@@ -883,7 +883,7 @@
                         'anthropic-version': '2023-06-01',
                         'anthropic-dangerous-direct-browser-access': 'true'
                     },
-                    body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: maxTokens, system, messages })
+                    body: JSON.stringify({ model, max_tokens: maxTokens, system, messages })
                 });
                 if (!res.ok) {
                     const errText = await res.text();
@@ -1230,31 +1230,28 @@
         function getChatSystem() {
             const name = userName || 'המשתמש';
             const genderNote = userGender === 'נקבה'
-                ? 'פנה בלשון נקבה (את, שלך, עשית וכו\')'
-                : 'פנה בלשון זכר (אתה, שלך, עשה וכו\')';
-            return `אתה מאמן AI חם — לא רובוט, לא פורמלי. אתה עוזר ל${name} להגשים יעד באפליקציית "בדרך".
-${genderNote}. השתמש בשם ${name} לפחות פעם אחת בשיחה.
+                ? 'פנה למשתמש בלשון נקבה (את, שלך, עשית וכו\'). חובה בכל משפט.'
+                : 'פנה למשתמש בלשון זכר (אתה, שלך, עשה וכו\'). חובה בכל משפט.';
+            return `אתה מאמן AI. אתה תמיד מדבר על עצמך בלשון זכר בלבד: "אני יכול", "אני מבין", "אני מציע".
+${genderNote}
+
+אתה משוחח עם ${name} — זו שיחה אנושית, לא ראיון.
+שאל שאלה אחת, קצרה וישירה, כאילו אתה מכיר את האדם. השתמש בשם ${name} פעם אחת.
 
 חוקים:
-- שאלה אחת בכל פעם, מקסימום 3-4 שאלות סה"כ
-- שאל רק מה שחסר — לא מה שברור מהיעד
-- אל תשאל כמה זמן יש — כולם עושים 7 דקות ביום, זו השיטה
-- כשיש לך מספיק — כתוב בדיוק: "יש לי מה שצריך"
-- עברית פשוטה וישירה — ללא סלנג, ללא אמוג'ים, ללא ביטויים מתורגמים מאנגלית
-- אסור: "שעוקץ", "שמדליק", "וויב", "צ'יל", "להנות מהתהליך" — דבר כמו מבוגר רגיל
-- כתיב נכון חובה: "אכילה" (לא "האכלה"), "שינה" (לא "שנייה"), "בריאות" (לא "בריאה")
-- קצר ולעניין
-- הבן הקשר ושפה יומיומית: "בא לי לקום בבוקר ולהרגיש טוב" = רוצה להרגיש טוב יותר
+- שאלה אחת בכל פעם. מקסימום 3 שאלות סה"כ
+- כשיש לך מספיק מידע — כתוב בדיוק: "יש לי מה שצריך"
+- אסור לכתוב רשימות ממוספרות (1. 2. 3.) ואסור מקפים ארוכים (—) בתשובות
+- אסור להציע אפשרויות לבחירה — שאל שאלה פתוחה
+- עברית בלבד, ללא מילים בשפות אחרות
+- אסור סלנג: לא "זנק", לא "שעוקץ", לא "וויב", לא "צ'יל", לא "מדליק"
+- אסור ביטויים מאנגלית: לא "אני רואה אותך", לא "אני שומע אותך"
+- אסור המצאת מילים שלא קיימות בעברית
+- כתיב נכון: "אכילה" לא "האכלה", "שינה" לא "שנייה"
+- קצר ולעניין — שני משפטים לכל היותר
 
-שאלות לפי סוג יעד (שאל רק מה שרלוונטי):
-- ריצה / מרתון: רמת כושר נוכחית, נעלי ריצה
-- מפוחית / גיטרה / כלי נגינה: האם יש כלי בבית, ניסיון מוזיקלי קודם
-- שפה זרה: רמה נוכחית, האם לומד בקורס/בנוסף
-- כתיבה: ז'אנר מועדף, ניסיון קודם
-- כושר \ שרירים: רמה נוכחית, מגבלות גופניות
-- בישול \ אפייה: רמת בישול נוכחית, יש מטבח מסודר
-- עסק \ פרילנס: תחום מומחיות, יש לקוחות פוטנציאלים
-- כל יעד אחר: ניסיון קיים, הצעד הראשון שחשבת עליו`;
+שאל רק מה שרלוונטי לפי היעד:
+ריצה/כושר: רמה נוכחית. כלי נגינה: יש כלי בבית? שפה: רמה נוכחית. בישול: רמת בישול. עסק: תחום מומחיות. אחר: ניסיון קיים`;
         }
 
         function getPlanSystem() {
@@ -1296,7 +1293,10 @@ ${genderNote}. אפשר לציין את שם ${name} בהוראות.
             document.getElementById('send-button').textContent = 'שלח';
             document.getElementById('send-button').onclick = sendMessage;
             document.getElementById('send-button').disabled = false;
-            document.getElementById('chat-input').value = '';
+            const ci = document.getElementById('chat-input');
+            ci.value = ''; ci.disabled = false; ci.placeholder = 'כתוב כאן...';
+            const oldBtn = document.getElementById('build-plan-btn');
+            if (oldBtn) oldBtn.remove();
 
             showScreen('screen-chat');
 
@@ -1311,7 +1311,7 @@ ${genderNote}. אפשר לציין את שם ${name} בהוראות.
             document.getElementById('send-button').disabled = true;
             showThinking();
 
-            const text = await callClaude(chatHistory, getChatSystem());
+            const text = await callClaude(chatHistory, getChatSystem(), 500, 'claude-sonnet-4-6');
             hideThinking();
             document.getElementById('send-button').disabled = false;
 
@@ -1337,7 +1337,12 @@ ${genderNote}. אפשר לציין את שם ${name} בהוראות.
 
             if (text.includes('יש לי מה שצריך')) {
                 isReadyToBuild = true;
-                // הוסף כפתור נפרד — לא נגע בכפתור שלח
+                // חסום שליחת הודעות נוספות
+                const chatInput = document.getElementById('chat-input');
+                const sendBtn = document.getElementById('send-button');
+                if (chatInput) { chatInput.disabled = true; chatInput.placeholder = 'המאמן קיבל מספיק — לחץ לבנות תוכנית'; }
+                if (sendBtn) { sendBtn.disabled = true; }
+                // הוסף כפתור בנה תוכנית
                 const existing = document.getElementById('build-plan-btn');
                 if (!existing) {
                     const btn = document.createElement('button');
@@ -1470,7 +1475,7 @@ ${genderNote}. אפשר לציין את שם ${name} בהוראות.
 
                 const text = await callClaude(
                     [{role: 'user', content: `יעד: ${currentGoal}\nשיחה:\n${convSummary}\n\nבנה תוכנית 5 ימים ספציפית ל"${currentGoal}".`}],
-                    getPlanSystem(), 2000
+                    getPlanSystem(), 2000, 'claude-sonnet-4-6'
                 );
 
                 console.log('Plan AI response:', text);
@@ -1865,7 +1870,7 @@ ${genderNote}. אפשר לציין את שם ${name} בהוראות.
             if (getApiKey()) {
                 const daysCompleted = completedMoves;
                 const prompt = `יעד: ${currentGoal}\nהמשתמש השלים ${daysCompleted} ימים בהצלחה.\nבנה 5 ימים חדשים (ימים ${daysCompleted+1}–${daysCompleted+5}) שמתקדמים ומאתגרים יותר מהשלב הקודם.\nחוקים: כל יום — פעולה ספציפית וישירה, 7 דקות בדיוק. אסור מרכאות כפולות ב-task וב-how.`;
-                const text = await callClaude([{role:'user', content: prompt}], PLAN_SYSTEM, 2000);
+                const text = await callClaude([{role:'user', content: prompt}], getPlanSystem(), 2000, 'claude-sonnet-4-6');
                 if (text) {
                     try {
                         const parsed = extractJSON(text);
@@ -2153,13 +2158,22 @@ ${genderNote}. אפשר לציין את שם ${name} בהוראות.
                     addMessage(msg.role === 'user' ? 'user' : 'ai', msg.content);
                 });
                 if (isReadyToBuild) {
-                    document.getElementById('send-button').textContent = 'בנה תוכנית ←';
-                    document.getElementById('send-button').onclick = buildPlan;
+                    const chatInput = document.getElementById('chat-input');
+                    const sendBtn = document.getElementById('send-button');
+                    if (chatInput) { chatInput.disabled = true; chatInput.placeholder = 'המאמן קיבל מספיק — לחץ לבנות תוכנית'; }
+                    if (sendBtn) { sendBtn.disabled = true; sendBtn.textContent = 'שלח'; }
+                    const btn = document.createElement('button');
+                    btn.id = 'build-plan-btn';
+                    btn.className = 'btn-main';
+                    btn.textContent = 'בנה את התוכנית שלי ←';
+                    btn.style.marginTop = '12px';
+                    btn.onclick = buildPlan;
+                    document.getElementById('chat-messages').after(btn);
                 } else {
                     document.getElementById('send-button').textContent = 'שלח';
                     document.getElementById('send-button').onclick = sendMessage;
+                    document.getElementById('send-button').disabled = false;
                 }
-                document.getElementById('send-button').disabled = false;
                 showScreen('screen-chat');
             } else {
                 showScreen('screen-landing');
