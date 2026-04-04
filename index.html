@@ -2129,6 +2129,16 @@ ${genderNote}. אפשר לציין את שם ${name} בהוראות.
             s.insertAdjacentHTML('beforeend', _cHtml);
         });
 
+            // פופ-אפ AI + פרטיות — פעם אחת לכל משתמש, כולל ישנים
+            if (!localStorage.getItem('bderech_seen_welcome')) {
+                localStorage.setItem('bderech_seen_welcome', '1');
+                showWelcomePopup(() => {});
+            }
+
+            // טעינת שם ומגדר
+            userName = localStorage.getItem('bderech_userName') || '';
+            userGender = localStorage.getItem('bderech_userGender') || 'זכר';
+
             if (loadState() && fullPlan.length > 0) {
                 document.getElementById('goal-name').textContent = currentGoal;
                 loadCurrentDay();
