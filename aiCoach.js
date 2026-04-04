@@ -13,11 +13,11 @@ function detectMessageType(msg) {
 // שכבה 1: תשובות קבועות לפי סוג
 function getHardcodedReply(type, user) {
     if (type === 'tomorrow') {
-        return 'זה יפתיע אותך.';
+        return 'מחר תגלה.';
     }
     if (type === 'task') {
         if (user.todayTask) {
-            return `המשימה היום: ${user.todayTask}${user.todayHow ? ' — ' + user.todayHow : ''}.`;
+            return `המשימה היום: ${user.todayTask}${user.todayHow ? '. ' + user.todayHow : ''}.`;
         }
         return 'המשימה של היום מחכה לך במסך הראשי.';
     }
