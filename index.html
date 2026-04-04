@@ -2041,7 +2041,7 @@ ${genderNote}. אפשר לציין את שם ${name} בהוראות.
         function goHome() { showScreen('screen-home'); }
 
         function changeGoal() {
-            const msg = 'להחליף יעד?\n\nהתוכנית הנוכחית תיסגר.\nהתקדמות לא נמחקת — תוכל לחזור.';
+            const msg = 'להחליף יעד?\n\nהתוכנית הנוכחית תימחק לחלוטין.\nאין דרך לחזור אליה.';
             if (confirm(msg)) {
                 localStorage.removeItem('bderech_state');
                 localStorage.removeItem('bderech_unlock_time');
