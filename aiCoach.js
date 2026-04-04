@@ -5,7 +5,7 @@ const COACH_API_URL = 'https://api.anthropic.com/v1/messages';
 // שכבה 1: זיהוי סוג הודעה
 function detectMessageType(msg) {
     // רק שאלה ישירה על מחר — לא כשמזכירים מחר בהקשר אחר
-    if (/מה (יהיה |קורה )?מחר|מה (הבא|המשימה הבאה|אחרי זה)/.test(msg)) return 'tomorrow';
+    if (/מחר|מה יפתיע|מה (הבא|המשימה הבאה|אחרי זה)/.test(msg)) return 'tomorrow';
     if (/מה (אני )?(עושה|צריך|אמור)|לא יודע מה|עזרה|מה המשימה|מה היום|איך עושים/.test(msg)) return 'task';
     return 'emotional';
 }

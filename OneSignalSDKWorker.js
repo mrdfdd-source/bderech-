@@ -2,7 +2,7 @@ try {
     importScripts("https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.sw.js");
 } catch(e) {}
 
-const CACHE_NAME = 'bderech-v12';
+const CACHE_NAME = 'bderech-v13';
 const URLS_TO_CACHE = ['./', './index.html', './aiCoach.js', './manifest.json', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', event => {
