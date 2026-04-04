@@ -17,6 +17,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="בדרך">
     <link rel="manifest" href="manifest.json">
+    <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
     <link rel="apple-touch-icon" href="icon-192.png">
     <link rel="apple-touch-icon" sizes="512x512" href="icon-512.png">
     <title>בדרך - הדרך להצלחה היא הדרך</title>
@@ -1774,44 +1775,71 @@
             showScreen('screen-timepicker');
         }
 
-        async function scheduleNotification(unlockTimeMs, timeStr) {
-            if (!('Notification' in window)) return;
-            const perm = await Notification.requestPermission();
-            if (perm !== 'granted') return;
+        // ===== OneSignal =====
+        const OS_APP_ID = 'e6205980-776e-4c50-9dcc-86bfe654b3b7';
+        const OS_REST_KEY = 'x2mjzotlsu3gfywkbfkclvctb';
+        window.OneSignalDeferred = window.OneSignalDeferred || [];
 
-            const delay = unlockTimeMs - Date.now();
-            if (delay <= 0 || delay > 48 * 60 * 60 * 1000) return;
-
-            // 1. פנה ל-Service Worker — שיטה אמינה יותר (עובדת גם כשהטאב ברקע)
-            if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
-                navigator.serviceWorker.controller.postMessage({
-                    type: 'SCHEDULE_NOTIFICATION',
-                    unlockTime: unlockTimeMs
+        function osInit() {
+            return new Promise(resolve => {
+                OneSignalDeferred.push(async function(OneSignal) {
+                    try {
+                        await OneSignal.init({
+                            appId: OS_APP_ID,
+                            serviceWorkerParam: { scope: '/bderech-/' },
+                            serviceWorkerPath: '/bderech-/OneSignalSDKWorker.js',
+                            notifyButton: { enable: false },
+                            allowLocalhostAsSecureOrigin: true
+                        });
+                    } catch(e) {}
+                    resolve(OneSignal);
                 });
-            }
+            });
+        }
 
-            // 2. גם setTimeout בדף — backup אם SW לא פעיל
-            setTimeout(() => {
-                if (document.visibilityState === 'hidden' || !navigator.serviceWorker.controller) {
-                    new Notification('בדרך — זמן לתנועה היומית! 🎯', {
-                        body: 'ה-7 דקות שלך מחכות. בוא נמשיך את הדרך.',
-                        icon: './icon.svg',
-                        dir: 'rtl',
-                        lang: 'he',
-                        vibrate: [200, 100, 200]
-                    });
-                }
-            }, delay);
+        async function osSchedule(sendAtMs, title, body) {
+            try {
+                const OneSignal = await osInit();
+                const subId = OneSignal.User.PushSubscription.id;
+                if (!subId) return;
+                await fetch('https://api.onesignal.com/notifications', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Basic ${OS_REST_KEY}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        app_id: OS_APP_ID,
+                        include_subscription_ids: [subId],
+                        send_after: new Date(sendAtMs).toISOString(),
+                        headings: { he: title, en: title },
+                        contents: { he: body, en: body }
+                    })
+                });
+            } catch(e) { console.log('OS schedule error:', e); }
+        }
 
-            // 3. רשום Periodic Background Sync אם נתמך (Chrome Android)
-            if ('serviceWorker' in navigator && 'periodicSync' in navigator.serviceWorker) {
-                try {
-                    const reg = await navigator.serviceWorker.ready;
-                    await reg.periodicSync.register('check-bderech-notification', {
-                        minInterval: 60 * 60 * 1000 // בדוק כל שעה
-                    });
-                } catch(e) { /* לא נתמך בדפדפן זה */ }
-            }
+        async function scheduleNotification(unlockTimeMs, timeStr) {
+            try {
+                const OneSignal = await osInit();
+                await OneSignal.Notifications.requestPermission();
+                const optedIn = OneSignal.User.PushSubscription.optedIn;
+                if (!optedIn) return;
+
+                // התראת ערב — כשמסתיימת הנעילה
+                await osSchedule(
+                    unlockTimeMs,
+                    'בדרך — זמן לתנועה היומית! 🎯',
+                    'ה-7 דקות שלך מחכות. בוא נמשיך את הדרך.'
+                );
+
+                // התראת בוקר — מחר ב-8:00
+                const tomorrow8 = new Date();
+                tomorrow8.setDate(tomorrow8.getDate() + 1);
+                tomorrow8.setHours(8, 0, 0, 0);
+                await osSchedule(
+                    tomorrow8.getTime(),
+                    'בדרך — בוקר טוב! ☀️',
+                    'הדרך מתחילה עם תנועה. פתח את האפליקציה ונתחיל.'
+                );
+            } catch(e) { console.log('scheduleNotification error:', e); }
         }
 
         function confirmTimePicker() {
@@ -2015,50 +2043,18 @@
                 showScreen('screen-landing');
             }
 
-            // ===== בקשת הרשאה להתראות =====
-            if ('Notification' in window && Notification.permission === 'default') {
-                setTimeout(() => {
-                    Notification.requestPermission().then(perm => {
-                        if (perm === 'granted' && 'serviceWorker' in navigator) {
-                            navigator.serviceWorker.ready.then(reg => {
-                                if (navigator.serviceWorker.controller) {
-                                    navigator.serviceWorker.controller.postMessage({ type: 'SCHEDULE_MORNING' });
-                                }
-                                // Periodic Background Sync (Chrome Android)
-                                if ('periodicSync' in reg) {
-                                    reg.periodicSync.register('check-bderech-notification', { minInterval: 60 * 60 * 1000 }).catch(() => {});
-                                }
-                            });
-                        }
-                    });
-                }, 2000);
-            }
+            // OneSignal מטפל בהרשאות — אתחול שקט ברקע
+            setTimeout(() => osInit(), 2000);
         });
     </script>
 
-    <!-- ===== רישום Service Worker ===== -->
+    <!-- ===== רישום Service Worker (OneSignal) ===== -->
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js', { scope: '/bderech-/' })
-                    .then(reg => {
-                        console.log('SW רשום:', reg.scope);
-                        // שלח הוראת תזמון להתראת בוקר
-                        if (navigator.serviceWorker.controller) {
-                            navigator.serviceWorker.controller.postMessage({ type: 'SCHEDULE_MORNING' });
-                        } else {
-                            navigator.serviceWorker.addEventListener('controllerchange', () => {
-                                navigator.serviceWorker.controller.postMessage({ type: 'SCHEDULE_MORNING' });
-                            });
-                        }
-                    })
+                navigator.serviceWorker.register('./OneSignalSDKWorker.js', { scope: '/bderech-/' })
+                    .then(reg => console.log('SW רשום:', reg.scope))
                     .catch(err => console.log('SW נכשל:', err));
-
-                navigator.serviceWorker.addEventListener('message', event => {
-                    if (event.data && event.data.type === 'SW_UPDATED') {
-                        window.location.reload();
-                    }
-                });
             });
         }
     </script>
