@@ -25,14 +25,22 @@ function getHardcodedReply(type, user) {
 }
 
 // שכבה 2: AI לרגשות — נוכחות אמיתית
-const EMOTIONAL_SYSTEM = `אתה מאמן שמקשיב. השב במשפט אחד בעברית שמשקף בחום את מה שהמשתמש אמר.
+function getEmotionalSystem(user) {
+    const name = user.name || '';
+    const genderNote = user.gender === 'נקבה'
+        ? 'פנה בלשון נקבה (את, שלך וכו\')'
+        : 'פנה בלשון זכר (אתה, שלך וכו\')';
+    const nameNote = name ? `קרא למשתמש בשם ${name} אם מתאים.` : '';
+    return `אתה מאמן AI שמקשיב. השב במשפט אחד בעברית שמשקף בחום את מה שנאמר.
+${genderNote}. ${nameNote}
 
 חוקים:
-- שקף מה שהוא אמר — אל תסגור, אל תנתב, אל תייעץ
-- אם אמר משהו רגשי — היה נוכח עם זה, לא מעבר ממנו
+- שקף מה שנאמר — אל תסגור, אל תנתב, אל תייעץ
+- אם נאמר משהו רגשי — היה נוכח עם זה, לא מעבר ממנו
 - לעולם אל תאמר "נפגשים מחר" — זה סוגר רגעים חשובים
 - לעולם אל תזכיר "תוכנית"
 - משפט אחד בלבד`;
+}
 
 async function askCoach(user, userMessage, history = []) {
     const type = detectMessageType(userMessage);
@@ -43,7 +51,8 @@ async function askCoach(user, userMessage, history = []) {
     const key = (typeof getApiKey === 'function') ? getApiKey() : localStorage.getItem('bderech_key');
     if (!key) return null;
 
-    const ctx = `[הקשר: יום ${user.dayNumber} בדרך. יעד: ${user.weeklyGoal}. משימה היום: ${user.todayTask || 'לא ידוע'}.]`;
+    const nameStr = user.name ? ` (${user.name})` : '';
+    const ctx = `[הקשר: יום ${user.dayNumber} בדרך${nameStr}. יעד: ${user.weeklyGoal}. משימה היום: ${user.todayTask || 'לא ידוע'}.]`;
     const messages = [
         ...history.slice(-4),
         { role: 'user', content: `${ctx}\n${userMessage}` }
@@ -60,8 +69,8 @@ async function askCoach(user, userMessage, history = []) {
             },
             body: JSON.stringify({
                 model: 'claude-haiku-4-5-20251001',
-                max_tokens: 60,
-                system: EMOTIONAL_SYSTEM,
+                max_tokens: 100,
+                system: getEmotionalSystem(user),
                 messages
             })
         });

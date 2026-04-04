@@ -199,12 +199,12 @@
             padding-bottom: 8px;
         }
 
-        .bubble { 
-            max-width: 90%; 
-            padding: 14px 17px; 
-            border-radius: 16px; 
-            font-size: 15px; 
-            line-height: 1.65; 
+        .bubble {
+            max-width: 90%;
+            padding: 14px 17px;
+            border-radius: 16px;
+            font-size: 17px;
+            line-height: 1.7;
         }
         .bubble.ai {
             background: #162645; 
@@ -428,10 +428,10 @@
             margin-bottom: 6px; 
             text-transform: uppercase;
         }
-        .how-txt { 
-            font-size: 14px; 
-            color: #aaa; 
-            line-height: 1.6; 
+        .how-txt {
+            font-size: 16px;
+            color: #aaa;
+            line-height: 1.7;
         }
 
         /* ===== טיימר ===== */
@@ -483,16 +483,16 @@
             width: 100%; 
             max-width: 320px;
         }
-        .running-card strong { 
-            color: #5bc8f5; 
-            font-size: 15px; 
-            display: block; 
-            margin-bottom: 5px; 
+        .running-card strong {
+            color: #5bc8f5;
+            font-size: 17px;
+            display: block;
+            margin-bottom: 8px;
         }
-        .running-card span { 
-            font-size: 13px; 
-            color: #777; 
-            line-height: 1.6; 
+        .running-card span {
+            font-size: 15px;
+            color: #999;
+            line-height: 1.7;
         }
         
         .done-banner { 
@@ -697,6 +697,20 @@
             <button class="btn-landing" onclick="startOnboarding()">התחל את הדרך שלך ←</button>
         </div>
 
+        <!-- מסך 0.5: שם ומגדר -->
+        <div class="screen" id="screen-intro">
+            <div class="lbl">בדרך</div>
+            <div class="big-title">בואו נתחיל<br><b>ממך</b></div>
+            <div class="q-text">מה שמך?</div>
+            <input id="name-input" placeholder="השם שלי..." maxlength="30" style="margin-bottom:24px;" onkeydown="if(event.key==='Enter') document.getElementById('gender-section').scrollIntoView()"/>
+            <div class="q-text">איך לפנות אליך?</div>
+            <div id="gender-section" style="display:flex;gap:12px;margin-bottom:28px;">
+                <button id="gender-male" onclick="selectGender('זכר')" style="flex:1;padding:14px;border-radius:12px;border:2px solid #2a4a6a;background:#122040;color:#ccc;font-size:16px;font-weight:700;cursor:pointer;font-family:inherit;transition:all 0.2s;">זכר</button>
+                <button id="gender-female" onclick="selectGender('נקבה')" style="flex:1;padding:14px;border-radius:12px;border:2px solid #2a4a6a;background:#122040;color:#ccc;font-size:16px;font-weight:700;cursor:pointer;font-family:inherit;transition:all 0.2s;">נקבה</button>
+            </div>
+            <button class="btn-main" onclick="saveIntro()">המשך ←</button>
+        </div>
+
         <!-- מסך 1: יעד -->
         <div class="screen" id="screen-goal">
             <div class="lbl">בדרך</div>
@@ -833,7 +847,7 @@
     <div id="coach-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);align-items:flex-end;justify-content:center;z-index:8500;padding:0 0 0 0;">
         <div style="background:#0d1a2e;border:1px solid #1e3a5f;border-radius:20px 20px 0 0;width:100%;max-width:480px;max-height:70vh;display:flex;flex-direction:column;padding-bottom:env(safe-area-inset-bottom);">
             <div style="display:flex;justify-content:space-between;align-items:center;padding:16px 20px 12px;border-bottom:1px solid #1e3a5f;">
-                <div style="color:#5bc8f5;font-weight:600;font-size:15px;">🎯 שוחח עם המאמן</div>
+                <div style="color:#5bc8f5;font-weight:600;font-size:15px;">🤖 שוחח עם מאמן ה-AI</div>
                 <button onclick="closeCoachChat()" style="background:none;border:none;color:#666;font-size:22px;cursor:pointer;">✕</button>
             </div>
             <div id="coach-messages" class="msgs" style="flex:1;overflow-y:auto;padding:16px;"></div>
@@ -982,6 +996,8 @@
         let goalType = '';
         let chatHistory = [];
         let isReadyToBuild = false;
+        let userName = '';
+        let userGender = 'זכר';
 
         let fullPlan = [];
         let totalMoves = 0;
@@ -1081,6 +1097,15 @@
         }
 
         // ===== זיהוי יעד =====
+        // יעדי הרגל = צריכים 30 ימים ליצירת עקביות
+        const HABIT_KEYWORDS = ['ספורט','כושר','דיאטה','משקל','לרוץ','ריצה','להרגיש','אושר','מאושר',
+            'שינה','מדיטציה','מיינדפולנס','הרגל','בריאות','לאכול','תזונה','להתאמן','לקום','בוקר'];
+
+        function isHabitGoal(goal) {
+            const g = goal.toLowerCase();
+            return HABIT_KEYWORDS.some(k => g.includes(k));
+        }
+
         function detectGoalType(goal) {
             const g = goal.toLowerCase();
             if (g.includes('מרתון')) return 'מרתון';
@@ -1096,11 +1121,43 @@
 
         function getTemplateMeta(goal) {
             const t = detectGoalType(goal);
-            return planTemplates[t] || planTemplates['כתיבה'];
+            const meta = { ...(planTemplates[t] || planTemplates['כללי']) };
+            // יעדי הרגל → 30 ימים ליצירת עקביות
+            if (isHabitGoal(goal)) meta.totalMoves = 30;
+            return meta;
+        }
+
+        // ===== פופ-אפ AI + פרטיות =====
+        function showWelcomePopup(onDone) {
+            const overlay = document.createElement('div');
+            overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;z-index:10000;padding:24px;';
+            overlay.innerHTML = `
+                <div style="background:#0d1a2e;border:1px solid #1e3a5f;border-radius:24px;padding:32px 28px;max-width:360px;width:100%;text-align:center;">
+                    <div style="font-size:40px;margin-bottom:16px;">🤖</div>
+                    <div style="font-size:20px;font-weight:700;color:#5bc8f5;margin-bottom:16px;">מאמן ה-AI של בדרך</div>
+                    <div style="font-size:15px;color:#aaa;line-height:1.8;margin-bottom:24px;text-align:right;">
+                        <div style="margin-bottom:10px;">✦ התוכנית שלך נוצרת על ידי כלי AI שתוכנת לעבוד לפי <strong style="color:#e0e0e0;">שיטת בדרך</strong> של דוב פינגר.</div>
+                        <div>✦ כל המידע שאתה מזין <strong style="color:#e0e0e0;">נשמר על המכשיר שלך בלבד</strong> — אף אחד לא רואה אותו.</div>
+                    </div>
+                    <button onclick="this.closest('[style]').remove();${''}" style="width:100%;padding:16px;background:#5bc8f5;color:#1a2744;border:none;border-radius:12px;font-size:16px;font-weight:800;cursor:pointer;font-family:inherit;">הבנתי, בוא נתחיל ←</button>
+                </div>`;
+            overlay.querySelector('button').onclick = () => { overlay.remove(); onDone(); };
+            document.body.appendChild(overlay);
         }
 
         // ===== נחיתה =====
         function startOnboarding() {
+            // טעינת שם ומגדר שמורים
+            userName = localStorage.getItem('bderech_userName') || '';
+            userGender = localStorage.getItem('bderech_userGender') || 'זכר';
+
+            // פופ-אפ היכרות — פעם אחת בלבד
+            if (!localStorage.getItem('bderech_seen_welcome')) {
+                localStorage.setItem('bderech_seen_welcome', '1');
+                showWelcomePopup(() => startOnboarding());
+                return;
+            }
+
             if (loadState() && fullPlan.length > 0) {
                 const msg = 'רק יעד אחד כל פעם.\n"הרבה יעדים מובילים לשום מקום אמיתי"\n\nרוצה להחליף את היעד הנוכחי?';
                 if (confirm(msg)) {
@@ -1113,6 +1170,11 @@
                 return;
             }
             if (!getApiKey()) { showScreen('screen-apikey'); return; }
+            // אם אין שם — מסך היכרות
+            if (!userName) {
+                showScreen('screen-intro');
+                return;
+            }
             showScreen('screen-goal');
         }
 
@@ -1128,9 +1190,32 @@
         function showScreen(id) {
             document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
             document.getElementById(id).classList.add('active');
-            const hideFab = ['screen-landing', 'screen-goal', 'screen-chat', 'screen-loading', 'screen-apikey'];
+            const hideFab = ['screen-landing', 'screen-intro', 'screen-goal', 'screen-chat', 'screen-loading', 'screen-apikey'];
             const fab = document.getElementById('coach-fab');
             if (fab) fab.style.display = (hideFab.includes(id) || !currentGoal) ? 'none' : 'flex';
+        }
+
+        // ===== שם ומגדר =====
+        let _selectedGender = 'זכר';
+        function selectGender(g) {
+            _selectedGender = g;
+            document.getElementById('gender-male').style.borderColor = g === 'זכר' ? '#5bc8f5' : '#2a4a6a';
+            document.getElementById('gender-male').style.color = g === 'זכר' ? '#5bc8f5' : '#ccc';
+            document.getElementById('gender-male').style.background = g === 'זכר' ? '#0d2245' : '#122040';
+            document.getElementById('gender-female').style.borderColor = g === 'נקבה' ? '#5bc8f5' : '#2a4a6a';
+            document.getElementById('gender-female').style.color = g === 'נקבה' ? '#5bc8f5' : '#ccc';
+            document.getElementById('gender-female').style.background = g === 'נקבה' ? '#0d2245' : '#122040';
+        }
+
+        function saveIntro() {
+            const name = document.getElementById('name-input').value.trim();
+            if (!name) { alert('אנא כתוב את שמך'); return; }
+            userName = name;
+            userGender = _selectedGender;
+            localStorage.setItem('bderech_userName', userName);
+            localStorage.setItem('bderech_userGender', userGender);
+            if (!getApiKey()) { showScreen('screen-apikey'); return; }
+            showScreen('screen-goal');
         }
 
         function shuffle(array) {
@@ -1143,15 +1228,21 @@
         }
 
         // ===== שיחת AI =====
-        const CHAT_SYSTEM = `אתה חבר-מאמן חם — לא רובוט, לא פורמלי. אתה עוזר למשתמש להגשים יעד באפליקציית "בדרך".
+        function getChatSystem() {
+            const name = userName || 'המשתמש';
+            const genderNote = userGender === 'נקבה'
+                ? 'פנה בלשון נקבה (את, שלך, עשית וכו\')'
+                : 'פנה בלשון זכר (אתה, שלך, עשית וכו\')';
+            return `אתה מאמן AI חם — לא רובוט, לא פורמלי. אתה עוזר ל${name} להגשים יעד באפליקציית "בדרך".
+${genderNote}. השתמש בשם ${name} לפחות פעם אחת בשיחה.
 
 חוקים:
 - שאלה אחת בכל פעם, מקסימום 3-4 שאלות סה"כ
 - שאל רק מה שחסר — לא מה שברור מהיעד
-- אל תשאל כמה זמן יש למשתמש — כולם עושים 7 דקות ביום, זו השיטה
+- אל תשאל כמה זמן יש — כולם עושים 7 דקות ביום, זו השיטה
 - כשיש לך מספיק — כתוב בדיוק: "יש לי מה שצריך"
 - עברית יומיומית, חמה — כמו שחבר שואל. קצר ולעניין
-- הבן הקשר ושפה יומיומית: "בא לי לקום בבוקר ולהרגיש שלמה" = רוצה להרגיש טוב יותר, לא שאלה על שעת קימה
+- הבן הקשר ושפה יומיומית: "בא לי לקום בבוקר ולהרגיש שלמה" = רוצה להרגיש טוב יותר
 
 שאלות לפי סוג יעד (שאל רק מה שרלוונטי):
 - ריצה / מרתון: רמת כושר נוכחית, נעלי ריצה
@@ -1162,20 +1253,31 @@
 - בישול \ אפייה: רמת בישול נוכחית, יש מטבח מסודר
 - עסק \ פרילנס: תחום מומחיות, יש לקוחות פוטנציאלים
 - כל יעד אחר: ניסיון קיים, הצעד הראשון שחשבת עליו`;
+        }
 
-        const PLAN_SYSTEM = `אתה מאמן אישי. קיבלת יעד ושיחה עם המשתמש. עכשיו בנה תוכנית 5 ימים.
+        function getPlanSystem() {
+            const name = userName || 'המשתמש';
+            const genderNote = userGender === 'נקבה' ? 'פנה בלשון נקבה' : 'פנה בלשון זכר';
+            return `אתה מאמן AI. קיבלת יעד ושיחה עם ${name}. עכשיו בנה תוכנית 5 ימים.
+${genderNote}. אפשר לציין את שם ${name} בהוראות.
 
-כלל אחד מוחלט: כל 5 הימים חייבים להיות פעולות ישירות וספציפיות לאותו יעד בדיוק.
-חשוב: אסור להשתמש במרכאות כפולות (") בתוך טקסט ה-task וה-how. השתמש רק בגרש בודד (') אם צריך.
-- יעד "לבשל אומלט" → 5 ימי בישול: תרגול חיתוך, הכנת מרכיבים, בישול ביצים וכו'
-- יעד "להחליף גלגל" → 5 ימים: הכרת הכלים, שחרור ברגים, הרמת רכב וכו'
-- יעד "ללמוד AI" → 5 ימים: קריאת מאמר, ניסוי כלי, כתיבת prompt וכו'
-אסור בכל מקרה: "כתוב על עצמך", "תכנן", "תחשוב" — אלא אם הכתיבה/תכנון הם עצמם היעד.
+כלל ברזל — 7 דקות מלאות:
+כל משימה חייבת למלא בדיוק 7 דקות פעילות. לא 3 דקות, לא 5 דקות — 7 דקות שלמות.
+בשדה "how" תן הוראות מפורטות שממלאות 7 דקות: כמה חזרות, כמה שניות כל אחת, מה עושים בדקות הראשונות, מה בדקות האחרונות.
+אם הפעולה מהירה יותר — הוסף חזרות, הוסף וריאציות, הארך.
 
-פורמט כל פעולה: 7 דקות בדיוק. הוראות קונקרטיות שאפשר להתחיל לעשות עכשיו.
+כלל שני — ספציפיות מוחלטת:
+כל 5 הימים חייבים להיות פעולות ישירות לאותו יעד בדיוק. אסור: 'כתוב על עצמך', 'תכנן', 'תחשוב'.
+חשוב: אסור מרכאות כפולות (") ב-task וב-how. השתמש בגרש בודד (') בלבד.
 
-החזר JSON בלבד:
-[{"day":1,"task":"כותרת קצרה","how":"הוראות ספציפיות ל-7 דקות","minutes":7},...]`;
+דוגמאות ל-7 דקות מלאות:
+- כושר: '10 שכיבות סמיכה (3 שניות ירידה, 1 שנייה עלייה) × 3 סטים, מנוחה 60 שניות בין סט. סה"כ 7 דקות.'
+- ריצה: 'רוץ 3 דקות בקצב שיחה, הלך 1 דקה, רוץ 3 דקות. לא פחות.'
+- שפה: 'אמור את המשפט 20 פעמים בקול, הקלט את עצמך, האזן, חזור 10 פעמים.'
+
+החזר JSON בלבד, 5 פריטים:
+[{"day":1,"task":"כותרת קצרה","how":"הוראות מפורטות שממלאות 7 דקות מלאות","minutes":7},...]`;
+        }
 
         function startChat() {
             currentGoal = document.getElementById('goal-input').value.trim();
@@ -1207,7 +1309,7 @@
             document.getElementById('send-button').disabled = true;
             showThinking();
 
-            const text = await callClaude(chatHistory, CHAT_SYSTEM);
+            const text = await callClaude(chatHistory, getChatSystem());
             hideThinking();
             document.getElementById('send-button').disabled = false;
 
@@ -1233,8 +1335,17 @@
 
             if (text.includes('יש לי מה שצריך')) {
                 isReadyToBuild = true;
-                document.getElementById('send-button').textContent = 'בנה תוכנית ←';
-                document.getElementById('send-button').onclick = buildPlan;
+                // הוסף כפתור נפרד — לא נגע בכפתור שלח
+                const existing = document.getElementById('build-plan-btn');
+                if (!existing) {
+                    const btn = document.createElement('button');
+                    btn.id = 'build-plan-btn';
+                    btn.className = 'btn-main';
+                    btn.textContent = 'בנה את התוכנית שלי ←';
+                    btn.style.marginTop = '12px';
+                    btn.onclick = buildPlan;
+                    document.getElementById('chat-messages').after(btn);
+                }
             }
             saveChatState();
         }
@@ -1264,7 +1375,7 @@
             const div = document.createElement('div');
             div.className = `bubble ${role}`;
             if (role === 'ai') {
-                div.innerHTML = `<span class="who">מאמן אישי</span>${renderMarkdown(text)}`;
+                div.innerHTML = `<span class="who">מאמן AI</span>${renderMarkdown(text)}`;
             } else {
                 div.textContent = text;
             }
@@ -1288,8 +1399,6 @@
         }
 
         function sendMessage() {
-            if (isReadyToBuild) { buildPlan(); return; }
-
             const input = document.getElementById('chat-input');
             const message = input.value.trim();
             if (!message) return;
@@ -1359,7 +1468,7 @@
 
                 const text = await callClaude(
                     [{role: 'user', content: `יעד: ${currentGoal}\nשיחה:\n${convSummary}\n\nבנה תוכנית 5 ימים ספציפית ל"${currentGoal}".`}],
-                    PLAN_SYSTEM, 2000
+                    getPlanSystem(), 2000
                 );
 
                 console.log('Plan AI response:', text);
@@ -1967,7 +2076,8 @@
             const todayPlan = fullPlan[todayCycleIdx] || {};
             const tomorrowPlan = fullPlan[tomorrowCycleIdx] || {};
             const user = {
-                name: localStorage.getItem('bderech_name') || '',
+                name: userName || localStorage.getItem('bderech_userName') || '',
+                gender: userGender || localStorage.getItem('bderech_userGender') || 'זכר',
                 dayNumber: currentDay,
                 yesterdayAction: lastCompleted.task || '',
                 yesterdayMood: lastCompleted.mood || '',
@@ -1999,7 +2109,7 @@
             const div = document.createElement('div');
             div.className = `bubble ${role}`;
             if (role === 'ai') {
-                div.innerHTML = `<span class="who">מאמן</span>${renderMarkdown(text)}`;
+                div.innerHTML = `<span class="who">מאמן AI</span>${renderMarkdown(text)}`;
             } else {
                 div.textContent = text;
             }
